@@ -1,0 +1,52 @@
+trigger: none
+
+variables:
+  terraformVersion: '1.7.5'
+
+stages:
+- stage: Terraform_LintAndValidate_TEST
+  displayName: 'Terraform Plan TEST on PR'
+  jobs:
+  - job: TerraformLintTest
+    displayName: 'Terraform plan - TEST'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - template: templates/terraform-plan.yml
+      parameters:
+        environment: 'test'
+        tfvarsFile: 'test.auto.tfvars'
+        backendResourceGroup: '$(testbackendRG)'
+        backendStorageAccount: '$(testbackendSA)'
+        backendContainer: '$(testbackendContainer)'
+        backendKey: 'test-terraform.tfstate'
+        azureServiceConnection: '$(testazureServiceConnection)'
+        terraformVersion: '$(terraformVersion)'
+        workingDirectory: 'environments/test'
+        subscriptionId: $(testsubscriptionid)
+
+# - stage: Terraform_Apply_TEST
+#   displayName: 'Terraform Apply TEST'
+#   dependsOn: Terraform_LintAndValidate_TEST
+#   jobs:
+#   - deployment: DeployToTest
+#     displayName: 'Terraform Apply - TEST'
+#     environment: test
+#     pool:
+#       vmImage: 'ubuntu-latest'
+#     strategy:
+#       runOnce:
+#         deploy:
+#           steps:
+#           - template: templates/terraform-apply.yml
+#             parameters:
+#               environment: 'test'
+#               tfvarsFile: 'test.auto.tfvars'
+#               backendResourceGroup: '$(testbackendRG)'
+#               backendStorageAccount: '$(testbackendSA)'
+#               backendContainer: '$(testbackendContainer)'
+#               backendKey: 'test-terraform.tfstate'
+#               azureServiceConnection: '$(testazureServiceConnection)'
+#               terraformVersion: '$(terraformVersion)'
+#               workingDirectory: 'environments/test'
+#               subscriptionId: $(testsubscriptionid)

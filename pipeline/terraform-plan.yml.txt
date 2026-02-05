@@ -1,0 +1,81 @@
+parameters:
+- name: environment
+  type: string
+- name: tfvarsFile
+  type: string
+- name: backendResourceGroup
+  type: string
+- name: backendStorageAccount
+  type: string
+- name: backendContainer
+  type: string
+- name: backendKey
+  type: string
+- name: azureServiceConnection
+  type: string
+- name: terraformVersion
+  type: string
+  default: '1.7.5'
+- name: workingDirectory
+  type: string
+  default: '.'
+- name: subscriptionId
+  type: string
+
+steps:
+- task: TerraformInstaller@1
+  displayName: 'Install Terraform ${{ parameters.terraformVersion }}'
+  inputs:
+    terraformVersion: '${{ parameters.terraformVersion }}'
+
+- task: AzureCLI@2
+  displayName: 'Terraform fmt, init, validate, plan (WIF/OIDC)'
+  inputs:
+    azureSubscription: '${{ parameters.azureServiceConnection }}'
+    addSpnToEnvironment: true
+    scriptType: bash
+    scriptLocation: inlineScript
+    workingDirectory: '${{ parameters.workingDirectory }}'
+    inlineScript: |
+      set -euo pipefail
+
+      echo "Environment: ${{ parameters.environment }}"
+      echo "Working directory: $(pwd)"
+
+      # Map Azure DevOps WIF service connection identity -> Terraform AzureRM auth env vars
+      export ARM_CLIENT_ID="$servicePrincipalId"
+      export ARM_TENANT_ID="$tenantId"
+      export ARM_SUBSCRIPTION_ID="${{ parameters.subscriptionId }}"
+      export ARM_USE_OIDC=true
+      export TF_IN_AUTOMATION=true
+
+      # Get federated OIDC token (var name differs depending on agent/task implementation)
+      if [ -n "${idToken:-}" ]; then
+        export ARM_OIDC_TOKEN="$idToken"
+      elif [ -n "${AZURE_FEDERATED_TOKEN_FILE:-}" ] && [ -f "${AZURE_FEDERATED_TOKEN_FILE}" ]; then
+        export ARM_OIDC_TOKEN="$(cat "$AZURE_FEDERATED_TOKEN_FILE")"
+      else
+        echo "ERROR: Federated OIDC token not found in environment."
+        echo "Expected either 'idToken' or 'AZURE_FEDERATED_TOKEN_FILE'."
+        exit 1
+      fi
+
+      echo "Terraform fmt (check)"
+      terraform fmt -check -recursive
+
+      echo "Terraform init (remote backend)"
+      terraform init -reconfigure \
+        -backend-config="resource_group_name=${{ parameters.backendResourceGroup }}" \
+        -backend-config="storage_account_name=${{ parameters.backendStorageAccount }}" \
+        -backend-config="container_name=${{ parameters.backendContainer }}" \
+        -backend-config="key=${{ parameters.backendKey }}" \
+        -backend-config="subscription_id=${{ parameters.subscriptionId }}" \
+        -backend-config="use_oidc=true"
+
+      echo "Terraform validate"
+      terraform validate
+
+      echo "Terraform plan"
+      terraform plan \
+        -out=tfplan \
+        -var-file="${{ parameters.tfvarsFile }}"
