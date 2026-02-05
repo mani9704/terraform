@@ -1,0 +1,1329 @@
+# Resource Group Configuration
+resource_group_name  = "rg-test-vm"
+create_resource_group = true
+location             = "East US"
+
+# ============================================
+# MULTIPLE VIRTUAL NETWORKS CONFIGURATION
+# ============================================
+# Each key (vnet1, vnet2, etc.) is a unique identifier
+# Each VNet can have multiple subnets
+virtual_networks = {
+  # First Virtual Network
+  "vnet1" = {
+    virtual_network_name = "vnet-production"
+    address_space        = ["10.0.0.0/16"]
+    dns_servers          = []
+    
+    # Multiple subnets in VNet1
+    subnets = [
+      {
+        name             = "subnet-frontend"
+        address_prefixes = ["10.0.1.0/24"]
+        create_nsg       = true
+        nsg_rules = [
+          {
+            name                       = "SSH"
+            priority                   = 1001
+            direction                  = "Inbound"
+            access                     = "Allow"
+            protocol                   = "Tcp"
+            destination_port_range     = "22"
+            source_address_prefix      = "*"
+            destination_address_prefix = "*"
+          },
+          {
+            name                       = "HTTP"
+            priority                   = 1002
+            direction                  = "Inbound"
+            access                     = "Allow"
+            protocol                   = "Tcp"
+            destination_port_range     = "80"
+            source_address_prefix      = "*"
+            destination_address_prefix = "*"
+          }
+        ]
+      },
+      {
+        name             = "subnet-backend"
+        address_prefixes = ["10.0.2.0/24"]
+        create_nsg       = true
+        nsg_rules = [
+          {
+            name                       = "SSH"
+            priority                   = 1001
+            direction                  = "Inbound"
+            access                     = "Allow"
+            protocol                   = "Tcp"
+            destination_port_range     = "22"
+            source_address_prefix      = "10.0.1.0/24"  # Only allow from frontend subnet
+            destination_address_prefix = "*"
+          }
+        ]
+      },
+      {
+        name             = "subnet-database"
+        address_prefixes = ["10.0.3.0/24"]
+        create_nsg       = false  # No NSG for this subnet
+      }
+    ]
+    
+    create_nsgs = true
+    tags = {
+      Environment = "Production"
+      Tier        = "Core"
+    }
+  }
+  
+  # Second Virtual Network
+  "vnet2" = {
+    virtual_network_name = "vnet-development"
+    address_space        = ["10.1.0.0/16"]
+    dns_servers          = []
+    
+    subnets = [
+      {
+        name             = "subnet-dev"
+        address_prefixes = ["10.1.1.0/24"]
+        create_nsg       = true
+        nsg_rules = [
+          {
+            name                       = "SSH"
+            priority                   = 1001
+            direction                  = "Inbound"
+            access                     = "Allow"
+            protocol                   = "Tcp"
+            destination_port_range     = "22"
+            source_address_prefix      = "*"
+            destination_address_prefix = "*"
+          }
+        ]
+      },
+      {
+        name             = "subnet-test"
+        address_prefixes = ["10.1.2.0/24"]
+        create_nsg       = true
+        nsg_rules = [
+          {
+            name                       = "AllowAll"
+            priority                   = 1001
+            direction                  = "Inbound"
+            access                     = "Allow"
+            protocol                   = "*"
+            destination_port_range     = "*"
+            source_address_prefix      = "*"
+            destination_address_prefix = "*"
+          }
+        ]
+      }
+    ]
+    
+    create_nsgs = true
+    tags = {
+      Environment = "Development"
+      Tier        = "Non-Prod"
+    }
+  }
+}
+
+# ============================================
+# MULTIPLE VIRTUAL MACHINES CONFIGURATION
+# ============================================
+# Each key (vm1, vm2, etc.) is a unique identifier
+# Each VM references a VNet by its key (vnet1, vnet2, etc.)
+virtual_machines = {
+  # VM 1 - In VNet1, Frontend Subnet
+  "vm1" = {
+    vm_name     = "vm-web-server-01"
+    vnet_key    = "vnet1"           # References "vnet1" from virtual_networks
+    subnet_name = "subnet-frontend" # Subnet name within vnet1
+    vm_size     = "Standard_B2s"
+    vm_os_type  = "Linux"
+    
+    admin_username                  = "azureuser"
+    admin_password                  = "ChangeMe123!@#"  # Change this!
+    disable_password_authentication = true
+    
+    enable_public_ip = true
+    use_vnet_nsg     = true  # Use NSG from VNet module
+    
+    os_disk_storage_account_type = "Premium_LRS"
+    os_disk_size_gb              = 50
+    
+    source_image_publisher = "Canonical"
+    source_image_offer     = "0001-com-ubuntu-server-jammy"
+    source_image_sku       = "22_04-lts"
+    source_image_version   = "latest"
+    
+    tags = {
+      Role        = "WebServer"
+      Environment = "Production"
+    }
+  }
+  
+  # VM 2 - In VNet1, Backend Subnet
+  "vm2" = {
+    vm_name     = "vm-app-server-01"
+    vnet_key    = "vnet1"
+    subnet_name = "subnet-backend"
+    vm_size     = "Standard_B2s"
+    vm_os_type  = "Linux"
+    
+    admin_username                  = "azureuser"
+    admin_password                  = "ChangeMe123!@#"  # Change this!
+    disable_password_authentication = true
+    
+    enable_public_ip = false  # No public IP for backend
+    use_vnet_nsg     = true
+    
+    os_disk_storage_account_type = "StandardSSD_LRS"
+    os_disk_size_gb              = 30
+    
+    # Add data disk
+    data_disks = [
+      {
+        disk_size_gb         = 100
+        storage_account_type = "StandardSSD_LRS"
+        caching              = "ReadWrite"
+      }
+    ]
+    
+    tags = {
+      Role        = "AppServer"
+      Environment = "Production"
+    }
+  }
+  
+  # VM 3 - In VNet2, Dev Subnet
+  "vm3" = {
+    vm_name     = "vm-dev-01"
+    vnet_key    = "vnet2"      # References "vnet2" from virtual_networks
+    subnet_name = "subnet-dev" # Subnet name within vnet2
+    vm_size     = "Standard_B1s"
+    vm_os_type  = "Linux"
+    
+    admin_username                  = "devuser"
+    admin_password                  = "ChangeMe123!@#"  # Change this!
+    disable_password_authentication = true
+    
+    enable_public_ip = true
+    use_vnet_nsg     = true
+    
+    tags = {
+      Role        = "Development"
+      Environment = "Development"
+    }
+  }
+  
+  # VM 4 - Windows VM in VNet1
+  "vm4" = {
+    vm_name     = "vm-windows-01"
+    vnet_key    = "vnet1"
+    subnet_name = "subnet-frontend"
+    vm_size     = "Standard_B2s"
+    vm_os_type  = "Windows"
+    
+    admin_username = "adminuser"
+    admin_password = "ChangeMe123!@#"  # Change this! (Required for Windows)
+    
+    enable_public_ip = true
+    use_vnet_nsg     = true
+    
+    source_image_publisher = "MicrosoftWindowsServer"
+    source_image_offer     = "WindowsServer"
+    source_image_sku       = "2022-Datacenter"
+    source_image_version   = "latest"
+    
+    tags = {
+      Role        = "WindowsServer"
+      Environment = "Production"
+    }
+  }
+}
+
+# ============================================
+# TRAFFIC MANAGER CONFIGURATION
+# ============================================
+# Multiple Traffic Managers with different routing methods and endpoints
+traffic_managers = {
+  # Traffic Manager 1 - Priority Routing (Failover)
+  "tm1" = {
+    traffic_manager_name   = "tm-production-primary"
+    traffic_routing_method = "Priority"  # Failover routing
+    relative_dns_name      = "tm-prod-app"
+    ttl                    = 300
+    
+    monitor_config = {
+      protocol                     = "HTTP"
+      port                         = 80
+      path                         = "/health"
+      interval_in_seconds          = 30
+      timeout_in_seconds           = 10
+      tolerated_number_of_failures = 3
+      expected_status_code_ranges  = ["200-299"]
+      custom_headers               = []
+    }
+    
+    # Priority-based endpoints (failover)
+    endpoints = [
+      {
+        name     = "vm1-primary"
+        type     = "azure"
+        vm_key   = "vm1"  # Primary endpoint
+        priority = 1
+        weight   = 1
+        enabled  = true
+      },
+      {
+        name     = "vm2-secondary"
+        type     = "azure"
+        vm_key   = "vm2"  # Secondary endpoint (failover)
+        priority = 2
+        weight   = 1
+        enabled  = true
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Routing     = "Priority"
+    }
+  }
+  
+  # Traffic Manager 2 - Weighted Routing (Load Balancing)
+  "tm2" = {
+    traffic_manager_name   = "tm-weighted-lb"
+    traffic_routing_method = "Weighted"
+    relative_dns_name      = "tm-weighted-app"
+    ttl                    = 300
+    
+    monitor_config = {
+      protocol                     = "HTTPS"
+      port                         = 443
+      path                         = "/"
+      interval_in_seconds          = 30
+      timeout_in_seconds           = 10
+      tolerated_number_of_failures = 3
+      expected_status_code_ranges  = ["200"]
+      custom_headers = [
+        {
+          name  = "Host"
+          value = "example.com"
+        }
+      ]
+    }
+    
+    # Weighted endpoints (traffic distribution)
+    endpoints = [
+      {
+        name     = "vm1-heavy-traffic"
+        type     = "azure"
+        vm_key   = "vm1"
+        weight   = 70  # 70% of traffic
+        priority = null
+        enabled  = true
+      },
+      {
+        name     = "vm2-light-traffic"
+        type     = "azure"
+        vm_key   = "vm2"
+        weight   = 30  # 30% of traffic
+        priority = null
+        enabled  = true
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Routing     = "Weighted"
+    }
+  }
+  
+  # Traffic Manager 3 - Performance Routing (Geographic)
+  "tm3" = {
+    traffic_manager_name   = "tm-performance"
+    traffic_routing_method = "Performance"
+    relative_dns_name      = "tm-perf-app"
+    ttl                    = 60
+    
+    monitor_config = {
+      protocol                     = "HTTP"
+      port                         = 80
+      path                         = "/"
+      interval_in_seconds          = 30
+      timeout_in_seconds           = 10
+      tolerated_number_of_failures = 3
+      expected_status_code_ranges  = ["200"]
+    }
+    
+    endpoints = [
+      {
+        name     = "vm1-us-east"
+        type     = "azure"
+        vm_key   = "vm1"
+        weight   = 1
+        enabled  = true
+      },
+      {
+        name     = "vm2-us-west"
+        type     = "azure"
+        vm_key   = "vm3"
+        weight   = 1
+        enabled  = true
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Routing     = "Performance"
+    }
+  }
+  
+  # Traffic Manager 4 - External Endpoints
+  "tm4" = {
+    traffic_manager_name   = "tm-hybrid"
+    traffic_routing_method = "Priority"
+    relative_dns_name      = "tm-hybrid-app"
+    ttl                    = 300
+    
+    monitor_config = {
+      protocol                     = "HTTP"
+      port                         = 80
+      path                         = "/"
+      interval_in_seconds          = 30
+      timeout_in_seconds           = 10
+      tolerated_number_of_failures = 3
+      expected_status_code_ranges  = ["200"]
+    }
+    
+    # Mix of Azure and External endpoints
+    endpoints = [
+      {
+        name     = "azure-vm-endpoint"
+        type     = "azure"
+        vm_key   = "vm1"
+        priority = 1
+        enabled  = true
+      },
+      {
+        name     = "external-webserver"
+        type     = "external"
+        target   = "example.com"  # External endpoint
+        priority = 2
+        enabled  = true
+      },
+      {
+        name     = "external-api"
+        type     = "external"
+        target   = "api.example.com"
+        priority = 3
+        enabled  = true
+      }
+    ]
+    
+    tags = {
+      Environment = "Hybrid"
+      Routing     = "Priority"
+    }
+  }
+  
+  # Traffic Manager 5 - Geographic Routing
+  "tm5" = {
+    traffic_manager_name   = "tm-geographic"
+    traffic_routing_method = "Geographic"
+    relative_dns_name      = "tm-geo-app"
+    ttl                    = 300
+    
+    monitor_config = {
+      protocol                     = "HTTP"
+      port                         = 80
+      path                         = "/"
+      interval_in_seconds          = 30
+      timeout_in_seconds           = 10
+      tolerated_number_of_failures = 3
+      expected_status_code_ranges  = ["200"]
+    }
+    
+    endpoints = [
+      {
+        name     = "vm-north-america"
+        type     = "azure"
+        vm_key   = "vm1"
+        weight   = 1
+        enabled  = true
+        # Note: Geographic routing requires geographic regions configured separately
+      },
+      {
+        name     = "vm-europe"
+        type     = "azure"
+        vm_key   = "vm2"
+        weight   = 1
+        enabled  = true
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Routing     = "Geographic"
+    }
+  }
+}
+
+# ============================================
+# FRONT DOOR CONFIGURATION
+# ============================================
+# Multiple Front Doors with different configurations
+front_doors = {
+  # Front Door 1 - Standard Front Door with Multiple Backends
+  "fd1" = {
+    front_door_profile_name  = "fd-production-primary"
+    front_door_endpoint_name = "fd-prod-endpoint"
+    sku_name                 = "Standard_AzureFrontDoor"
+    endpoint_enabled         = true
+    
+    origin_groups = [
+      {
+        name = "web-backend-pool"
+        health_probe = {
+          protocol            = "Http"
+          request_type        = "HEAD"
+          interval_in_seconds = 100
+          path                = "/health"
+        }
+        load_balancing = {
+          additional_latency_in_milliseconds = 50
+          sample_size                        = 4
+          successful_samples_required        = 3
+        }
+        session_affinity_enabled = false
+      },
+      {
+        name = "api-backend-pool"
+        health_probe = {
+          protocol            = "Http"
+          request_type        = "GET"
+          interval_in_seconds = 100
+          path                = "/api/health"
+        }
+        load_balancing = {
+          additional_latency_in_milliseconds = 100
+          sample_size                        = 4
+          successful_samples_required        = 3
+        }
+      }
+    ]
+    
+    origins = [
+      {
+        name             = "vm1-web-origin"
+        origin_group_name = "web-backend-pool"
+        vm_key           = "vm1"  # Uses VM1's public IP
+        http_port        = 80
+        https_port       = 443
+        priority         = 1
+        weight           = 1000
+        enabled          = true
+      },
+      {
+        name             = "vm2-web-origin"
+        origin_group_name = "web-backend-pool"
+        vm_key           = "vm2"  # Uses VM2's public IP (if it has one)
+        http_port        = 80
+        https_port       = 443
+        priority         = 1
+        weight           = 1000
+        enabled          = true
+      },
+      {
+        name             = "vm1-api-origin"
+        origin_group_name = "api-backend-pool"
+        vm_key           = "vm1"
+        http_port        = 8080
+        https_port       = 8443
+        priority         = 1
+        weight           = 1000
+        enabled          = true
+      },
+      {
+        name              = "app1-origin"
+        origin_group_name = "web-backend-pool"
+        app_service_key   = "app1"  # References App Service by key (uses App Service resource ID)
+        http_port         = 80
+        https_port        = 443
+        priority          = 1
+        weight            = 1000
+        enabled           = true
+      }
+    ]
+    
+    routes = [
+      {
+        name                  = "web-route"
+        origin_group_name     = "web-backend-pool"
+        origin_names          = ["vm1-web-origin", "vm2-web-origin"]
+        patterns_to_match     = ["/web/*", "/"]
+        supported_protocols   = ["Http", "Https"]
+        forwarding_protocol   = "MatchRequest"
+        https_redirect_enabled = true
+        cache = {
+          query_string_caching_behavior = "IgnoreQueryString"
+          compression_enabled           = true
+          content_types_to_compress     = ["text/html", "text/css", "application/javascript"]
+        }
+      },
+      {
+        name                  = "api-route"
+        origin_group_name     = "api-backend-pool"
+        origin_names          = ["vm1-api-origin"]
+        patterns_to_match     = ["/api/*"]
+        supported_protocols   = ["Http", "Https"]
+        forwarding_protocol   = "MatchRequest"
+        https_redirect_enabled = true
+        cache = {
+          query_string_caching_behavior = "UseQueryString"
+          compression_enabled           = false
+        }
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Type        = "Standard"
+    }
+  }
+  
+  # Front Door 2 - Premium Front Door with Custom Domain and WAF
+  "fd2" = {
+    front_door_profile_name  = "fd-premium-secure"
+    front_door_endpoint_name = "fd-premium-endpoint"
+    sku_name                 = "Premium_AzureFrontDoor"
+    endpoint_enabled         = true
+    
+    origin_groups = [
+      {
+        name = "secure-backend-pool"
+        health_probe = {
+          protocol            = "Https"
+          request_type        = "HEAD"
+          interval_in_seconds = 100
+          path                = "/health"
+        }
+        load_balancing = {
+          additional_latency_in_milliseconds = 50
+          sample_size                        = 4
+          successful_samples_required        = 3
+        }
+      }
+    ]
+    
+    origins = [
+      {
+        name             = "vm3-origin"
+        origin_group_name = "secure-backend-pool"
+        vm_key           = "vm3"
+        http_port        = 80
+        https_port       = 443
+        priority         = 1
+        weight           = 1000
+        enabled          = true
+      }
+    ]
+    
+    # Custom domains (requires DNS and SSL certificate setup)
+    # custom_domains = [
+    #   {
+    #     name      = "app-custom-domain"
+    #     host_name = "app.example.com"
+    #     tls = {
+    #       certificate_type    = "CustomerCertificate"
+    #       minimum_tls_version = "TLS12"
+    #     }
+    #   }
+    # ]
+    
+    # Multiple Security Policies (WAF Policies) - Each can have different WAF policy and associations
+    # security_policies = [
+    #   {
+    #     name = "waf-policy-production"
+    #     waf_policy_id = "/subscriptions/xxx/resourceGroups/xxx/providers/Microsoft.Network/frontDoorWebApplicationFirewallPolicies/prod-waf"
+    #     associations = [
+    #       {
+    #         custom_domain_names = ["app.example.com"]
+    #         patterns_to_match   = ["/*"]
+    #       }
+    #     ]
+    #   },
+    #   {
+    #     name = "waf-policy-staging"
+    #     waf_policy_id = "/subscriptions/xxx/resourceGroups/xxx/providers/Microsoft.Network/frontDoorWebApplicationFirewallPolicies/staging-waf"
+    #     associations = [
+    #       {
+    #         custom_domain_names = ["staging.example.com"]
+    #         patterns_to_match   = ["/api/*"]
+    #       }
+    #     ]
+    #   }
+    # ]
+    
+    # Legacy: Single WAF Policy (for backward compatibility)
+    # waf_policy_id = "/subscriptions/xxx/resourceGroups/xxx/providers/Microsoft.Network/frontDoorWebApplicationFirewallPolicies/xxx"
+    # waf_patterns_to_match = ["/*"]
+    
+    routes = [
+      {
+        name                  = "secure-route"
+        origin_group_name     = "secure-backend-pool"
+        origin_names          = ["vm3-origin"]
+        patterns_to_match     = ["/*"]
+        supported_protocols   = ["Https"]  # HTTPS only
+        forwarding_protocol   = "HttpsOnly"
+        https_redirect_enabled = true
+        cache = {
+          query_string_caching_behavior = "IgnoreQueryString"
+          compression_enabled           = true
+        }
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Type        = "Premium"
+      Security    = "High"
+    }
+  }
+}
+
+# ============================================
+# APP SERVICES CONFIGURATION
+# ============================================
+# Multiple App Services with different configurations
+app_services = {
+  # App Service 1 - Linux Node.js App with Application Insights Integration
+  "app1" = {
+    app_service_name         = "app-nodejs-prod"
+    app_service_plan_name    = "plan-nodejs-prod"
+    app_service_plan_sku_name = "S1"
+    os_type                  = "Linux"
+    
+    # Application Insights Integration - Automatically injects instrumentation key and connection string
+    app_insights_key = "appinsights1"  # References application_insights["appinsights1"]
+    # This automatically adds:
+    # - APPINSIGHTS_INSTRUMENTATIONKEY to app_settings
+    # - APPLICATIONINSIGHTS_CONNECTION_STRING to app_settings
+    # - application_insights_connection_string to site_config
+    # - application_insights_key to site_config
+    
+    app_settings = {
+      "WEBSITE_NODE_DEFAULT_VERSION" = "18-lts"
+      "ENVIRONMENT"                  = "Production"
+      # APPINSIGHTS_INSTRUMENTATIONKEY and APPLICATIONINSIGHTS_CONNECTION_STRING
+      # are automatically added from app_insights_key
+    }
+    
+    connection_strings = [
+      {
+        name  = "DatabaseConnection"
+        type  = "SQLAzure"
+        value = "Server=myserver.database.windows.net;Database=mydb;"
+      }
+    ]
+    
+    site_config = {
+      always_on          = true
+      http2_enabled      = true
+      minimum_tls_version = "1.2"
+      websockets_enabled = true
+      health_check_path  = "/health"
+      ip_restrictions = [
+        {
+          action     = "Allow"
+          ip_address = "203.0.113.0/24"
+          name       = "office-ip-range"
+          priority   = 100
+        }
+      ]
+      cors = {
+        allowed_origins     = ["https://example.com"]
+        support_credentials = true
+      }
+    }
+    
+    site_config_application_stack = {
+      node_version = "18-lts"
+    }
+    
+    identity_type = "SystemAssigned"
+    
+    # Storage Accounts - Storage Mounts for App Service
+    # Reference Storage Account by key - automatically resolves to account name, share name, and access key
+    storage_accounts = [
+      {
+        name                = "content-storage"
+        type                = "AzureFiles"
+        storage_account_key = "sa1"  # References storage_accounts["sa1"]
+        file_share_key      = "app-content"  # References file_shares["app-content"] from sa1
+        mount_path          = "/mnt/content"
+      },
+      {
+        name                = "logs-storage"
+        type                = "AzureFiles"
+        storage_account_key = "sa1"  # Same storage account, different file share
+        file_share_key      = "app-logs"  # References file_shares["app-logs"] from sa1
+        mount_path          = "/mnt/logs"
+      }
+    ]
+    
+    # Deployment Slots
+    deployment_slots = [
+      {
+        name = "staging"
+        app_settings = {
+          "ENVIRONMENT" = "Staging"
+          "APPINSIGHTS_SAMPLING_PERCENTAGE" = "50"
+        }
+        site_config = {
+          always_on = false  # Can be false for staging
+        }
+        tags = {
+          Slot = "Staging"
+        }
+      },
+      {
+        name = "dev"
+        app_settings = {
+          "ENVIRONMENT" = "Development"
+        }
+        site_config = {
+          always_on = false
+        }
+        tags = {
+          Slot = "Development"
+        }
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Stack       = "Node.js"
+    }
+  }
+  
+  # App Service 2 - Linux Python App
+  "app2" = {
+    app_service_name         = "app-python-prod"
+    app_service_plan_name    = "plan-python-prod"
+    app_service_plan_sku_name = "S1"
+    os_type                  = "Linux"
+    
+    app_settings = {
+      "PYTHON_VERSION"      = "3.11"
+      "ENVIRONMENT"         = "Production"
+      "SCM_DO_BUILD_DURING_DEPLOYMENT" = "true"
+    }
+    
+    site_config = {
+      always_on           = true
+      http2_enabled       = true
+      minimum_tls_version = "1.2"
+      health_check_path   = "/healthcheck"
+    }
+    
+    site_config_application_stack = {
+      python_version = "3.11"
+    }
+    
+    identity_type = "SystemAssigned"
+    
+    backup = {
+      name                = "backup-daily"
+      storage_account_url = "https://storageaccount.blob.core.windows.net/backups"
+      enabled             = true
+      schedule = {
+        frequency_interval   = 1
+        frequency_unit       = "Day"
+        retention_period_days = 30
+      }
+    }
+    
+    tags = {
+      Environment = "Production"
+      Stack       = "Python"
+    }
+  }
+  
+  # App Service 3 - Windows .NET App with Application Insights
+  "app3" = {
+    app_service_name         = "app-dotnet-prod"
+    app_service_plan_name    = "plan-dotnet-prod"
+    app_service_plan_os_type = "Windows"
+    app_service_plan_sku_name = "S1"
+    os_type                  = "Windows"
+    
+    # Application Insights Integration
+    app_insights_key = "appinsights2"  # Different Application Insights instance
+    
+    app_settings = {
+      "ASPNETCORE_ENVIRONMENT" = "Production"
+      # Application Insights settings automatically injected
+    }
+    
+    connection_strings = [
+      {
+        name  = "DefaultConnection"
+        type  = "SQLAzure"
+        value = "Server=myserver.database.windows.net;Database=mydb;"
+      },
+      {
+        name  = "RedisConnection"
+        type  = "RedisCache"
+        value = "your-redis-connection-string"
+      }
+    ]
+    
+    site_config = {
+      always_on           = true
+      http2_enabled       = true
+      minimum_tls_version = "1.2"
+      windows_fx_version  = "v4.0"
+    }
+    
+    site_config_application_stack = {
+      dotnet_version = "v6.0"
+    }
+    
+    identity_type = "SystemAssigned"
+    
+    auth_settings = {
+      enabled = true
+      active_directory = {
+        client_id                 = "your-client-id"
+        client_secret_setting_name = "MICROSOFT_PROVIDER_AUTHENTICATION_SECRET"
+        allowed_audiences         = ["api://yourapp"]
+      }
+      default_provider = "AzureActiveDirectory"
+      unauthenticated_client_action = "RedirectToLoginPage"
+    }
+    
+    tags = {
+      Environment = "Production"
+      Stack       = ".NET"
+    }
+  }
+  
+  # App Service 4 - Docker Container
+  "app4" = {
+    app_service_name         = "app-docker-prod"
+    app_service_plan_name    = "plan-docker-prod"
+    app_service_plan_sku_name = "P1V2"  # Premium for better Docker support
+    os_type                  = "Linux"
+    
+    app_settings = {
+      "DOCKER_REGISTRY_SERVER_URL"      = "https://yourregistry.azurecr.io"
+      "DOCKER_REGISTRY_SERVER_USERNAME" = "yourusername"
+      "DOCKER_REGISTRY_SERVER_PASSWORD" = "@Microsoft.KeyVault(SecretUri=https://yourvault.vault.azure.net/secrets/docker-password/)"
+    }
+    
+    site_config = {
+      always_on           = true
+      http2_enabled       = true
+      minimum_tls_version = "1.2"
+      container_registry_use_managed_identity = true
+      container_registry_managed_identity_client_id = null  # Uses system-assigned identity
+    }
+    
+    site_config_application_stack = {
+      docker_image     = "yourregistry.azurecr.io/yourimage"
+      docker_image_tag = "latest"
+    }
+    
+    identity_type = "SystemAssigned"
+    
+    tags = {
+      Environment = "Production"
+      Stack       = "Docker"
+    }
+  }
+  
+  # App Service 5 - Shared App Service Plan (cost optimization)
+  "app5" = {
+    app_service_name         = "app-shared-dev"
+    create_app_service_plan  = false
+    app_service_plan_id      = null  # Would reference app1's plan ID in real scenario
+    # Note: In real scenario, use: app_service_plan_id = module.app_service["app1"].app_service_plan_id
+    os_type                  = "Linux"
+    
+    app_settings = {
+      "ENVIRONMENT" = "Development"
+    }
+    
+    site_config = {
+      always_on = false  # Can be false for dev environments
+    }
+    
+    tags = {
+      Environment = "Development"
+      CostCenter  = "Shared"
+    }
+  }
+}
+
+# ============================================
+# MONITORING CONFIGURATION
+# ============================================
+
+# Log Analytics Workspaces
+log_analytics_workspaces = {
+  # Log Analytics Workspace 1 - Primary workspace
+  "law1" = {
+    log_analytics_workspace_name = "law-primary-workspace"
+    sku                          = "PerGB2018"
+    retention_in_days            = 90
+    allow_resource_only_permissions = true
+    internet_ingestion_enabled   = true
+    internet_query_enabled       = true
+    
+    # Enable solutions
+    solutions = [
+      {
+        solution_name = "ContainerInsights"
+        publisher     = "Microsoft"
+        product       = "OMSGallery/ContainerInsights"
+      },
+      {
+        solution_name = "VMInsights"
+        publisher     = "Microsoft"
+        product       = "OMSGallery/VMInsights"
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Purpose     = "Central-Logging"
+    }
+  }
+  
+  # Log Analytics Workspace 2 - Security workspace
+  "law2" = {
+    log_analytics_workspace_name = "law-security-workspace"
+    sku                          = "PerGB2018"
+    retention_in_days            = 365  # Longer retention for security logs
+    allow_resource_only_permissions = true
+    
+    solutions = [
+      {
+        solution_name = "SecurityInsights"
+        publisher     = "Microsoft"
+        product       = "OMSGallery/SecurityInsights"
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Purpose     = "Security-Monitoring"
+    }
+  }
+}
+
+# Application Insights
+application_insights = {
+  # Application Insights 1 - Web Application
+  "appinsights1" = {
+    application_insights_name             = "appinsights-web-app"
+    application_type                      = "web"
+    retention_in_days                     = 90
+    daily_data_cap_in_gb                  = 5  # Limit to 5GB per day
+    daily_data_cap_notifications_disabled = false
+    disable_ip_masking                    = false
+    log_analytics_workspace_key           = "law1"  # Links to log_analytics_workspaces["law1"]
+    internet_ingestion_enabled            = true
+    internet_query_enabled                = true
+    
+    # Web Tests (Availability Tests)
+    web_tests = [
+      {
+        name          = "main-web-test"
+        kind          = "ping"
+        configuration = <<-XML
+        <WebTest Name="MainWebTest" Id="xxx" Enabled="True" CssProjectStructure="" CssIteration="" Timeout="120" WorkItemIds="" xmlns="http://microsoft.com/schemas/VisualStudio/TeamTest/2010" Description="" CredentialsUserName="" CredentialsPassword="" PreAuthenticate="True" Proxy="default" StopOnError="False" RecordedResultFile="" ResultsLocale="">
+          <Items>
+            <Request Method="GET" Guid="xxx" Version="1.1" Url="https://yourwebsite.com" ThinkTime="0" Timeout="120" ParseDependentRequests="True" FollowRedirects="True" RecordResult="True" Cache="False" ResponseTimeGoal="0" Encoding="utf-8" ExpectedHttpStatusCode="200" ExpectedResponseUrl="" ReportingName="" IgnoreHttpStatusCode="False" />
+          </Items>
+        </WebTest>
+        XML
+        frequency     = 300  # Every 5 minutes
+        timeout       = 60
+        enabled       = true
+        geo_locations = ["us-ca-sjc-azr", "us-tx-sn1-azr", "us-il-ch1-azr"]
+        retry_enabled = true
+      }
+    ]
+    
+    # API Keys for programmatic access
+    api_keys = [
+      {
+        name             = "readonly-key"
+        read_permissions = ["ReadTelemetry", "AuthenticateSDKControlChannel"]
+      },
+      {
+        name              = "write-key"
+        write_permissions = ["WriteAnnotations"]
+      }
+    ]
+    
+    # Smart Detection Rules
+    smart_detection_rules = [
+      {
+        name                            = "slow_server_response_time"
+        enabled                         = true
+        send_emails_to_subscription_owners = true
+        additional_email_recipients     = ["admin@example.com"]
+      },
+      {
+        name                            = "slow_page_load_time"
+        enabled                         = true
+        send_emails_to_subscription_owners = false
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Application = "Web-App"
+    }
+  }
+  
+  # Application Insights 2 - API Application
+  "appinsights2" = {
+    application_insights_name = "appinsights-api-app"
+    application_type          = "web"
+    retention_in_days         = 90
+    log_analytics_workspace_key = "law1"
+    
+    tags = {
+      Environment = "Production"
+      Application = "API"
+    }
+  }
+}
+
+# Diagnostic Settings - Enable diagnostics for VMs, App Services, etc.
+# Use map format - key is used as identifier for easy reference
+diagnostic_settings = {
+  # Diagnostic Settings for VM1 - Using common target_resource_key (Recommended)
+  "vm1-diagnostics" = {
+    name                = "vm1-diagnostics"
+    target_resource_key = "vm1"  # Automatically detects it's a VM - references virtual_machines["vm1"]
+    log_analytics_workspace_key = "law1"  # References log_analytics_workspaces["law1"]
+    
+    log_categories = [
+      {
+        category = "VMProtectionAlerts"
+        retention_policy = {
+          enabled = true
+          days    = 30
+        }
+      },
+      {
+        category = "ServiceMap"
+        retention_policy = {
+          enabled = truelaage 
+          days    = 30
+        }
+      }
+    ]
+    
+    metric_categories = [
+      {
+        category = "AllMetrics"
+        enabled  = true
+        retention_policy = {
+          enabled = true
+          days    = 30
+        }
+      }
+    ]
+    
+    # Legacy support - simple lists
+    legacy_logs    = ["VMProtectionAlerts", "ServiceMap"]
+    legacy_metrics = ["AllMetrics"]
+  },
+  
+  # Diagnostic Settings for VM2 - Using common target_resource_key
+  "vm2-diagnostics" = {
+    name                = "vm2-diagnostics"
+    target_resource_key = "vm2"  # Automatically detects it's a VM
+    log_analytics_workspace_key = "law1"
+    
+    legacy_logs    = ["VMProtectionAlerts"]
+    legacy_metrics = ["AllMetrics"]
+  },
+  
+  # Diagnostic Settings for App Service 1 - Using common target_resource_key (Recommended)
+  "app1-diagnostics" = {
+    name                = "app1-diagnostics"
+    target_resource_key = "app1"  # Automatically detects it's an App Service - references app_services["app1"]
+    log_analytics_workspace_key = "law1"
+    
+    log_categories = [
+      {
+        category = "AppServiceAppLogs"
+        retention_policy = {
+          enabled = true
+          days    = 30
+        }
+      },
+      {
+        category = "AppServiceHTTPLogs"
+        retention_policy = {
+          enabled = true
+          days    = 30
+        }
+      },
+      {
+        category = "AppServiceConsoleLogs"
+        retention_policy = {
+          enabled = true
+          days    = 30
+        }
+      }
+    ]
+    
+    metric_categories = [
+      {
+        category = "AllMetrics"
+        enabled  = true
+        retention_policy = {
+          enabled = true
+          days    = 30
+        }
+      }
+    ]
+  },
+  
+  # Diagnostic Settings for App Service 2 - Different workspace
+  "app2-diagnostics" = {
+    name                = "app2-diagnostics"
+    target_resource_key = "app2"  # Automatically detects it's an App Service
+    log_analytics_workspace_key = "law2"  # Different workspace
+    
+    log_categories = [
+      {
+        category = "AppServiceAppLogs"
+        retention_policy = {
+          enabled = true
+          days    = 90  # Longer retention
+        }
+      }
+    ]
+    
+    metric_categories = [
+      {
+        category = "AllMetrics"
+        enabled  = true
+        retention_policy = {
+          enabled = true
+          days    = 90
+        }
+      }
+    ]
+  }
+  
+  # Alternative: Use direct resource IDs (if needed)
+  # "custom-diagnostics" = {
+  #   name                    = "custom-diagnostics"
+  #   target_resource_id      = "/subscriptions/xxx/resourceGroups/xxx/providers/..."
+  #   log_analytics_workspace_id = "/subscriptions/xxx/resourceGroups/xxx/providers/..."
+  #   legacy_logs             = ["AllLogs"]
+  #   legacy_metrics          = ["AllMetrics"]
+  # }
+}
+
+# ============================================
+# STORAGE ACCOUNTS CONFIGURATION
+# ============================================
+
+storage_accounts = {
+  # Storage Account 1 - For App Service Storage Mounts
+  "sa1" = {
+    storage_account_name       = "stappservicemounts001"  # Must be globally unique, lowercase alphanumeric
+    account_tier               = "Standard"
+    account_replication_type   = "LRS"
+    account_kind               = "StorageV2"
+    access_tier                = "Hot"
+    enable_https_traffic_only  = true
+    min_tls_version            = "TLS1_2"
+    
+    # File Shares for App Service Storage Mounts
+    file_shares = [
+      {
+        name          = "app-content"
+        quota         = 5120  # 5GB
+        access_tier   = "TransactionOptimized"
+        enabled_protocol = "SMB"
+      },
+      {
+        name          = "app-logs"
+        quota         = 10240  # 10GB
+        access_tier   = "TransactionOptimized"
+      }
+    ]
+    
+    # Containers for Blob Storage
+    containers = [
+      {
+        name                 = "uploads"
+        container_access_type = "private"
+      },
+      {
+        name                 = "public"
+        container_access_type = "blob"  # Allow public blob access
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Purpose     = "App-Service-Storage"
+    }
+  },
+  
+  # Storage Account 2 - For general purposes
+  "sa2" = {
+    storage_account_name       = "stgeneralstorage001"
+    account_tier               = "Standard"
+    account_replication_type   = "GRS"  # Geo-redundant
+    account_kind               = "StorageV2"
+    
+    containers = [
+      {
+        name                 = "backups"
+        container_access_type = "private"
+      }
+    ]
+    
+    # Tables
+    tables = [
+      {
+        name = "usertable"
+      }
+    ]
+    
+    # Queues
+    queues = [
+      {
+        name = "processing-queue"
+      }
+    ]
+    
+    tags = {
+      Environment = "Production"
+      Purpose     = "General-Storage"
+    }
+  }
+}
+
+# Common Tags (applied to all resources)
+tags = {
+  Environment = "Test"
+  Project     = "Terraform-Multi-VM"
+  ManagedBy   = "Terraform"
+  Owner       = "YourName"
+}
