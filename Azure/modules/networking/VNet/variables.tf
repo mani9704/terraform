@@ -36,21 +36,21 @@ variable "dns_servers" {
 variable "subnets" {
   description = "List of subnets to create"
   type = list(object({
-    name                                         = string
-    address_prefixes                             = list(string)
-    service_endpoints                            = optional(list(string))
-    service_endpoint_policy_ids                  = optional(list(string))
-    private_endpoint_network_policies_enabled    = optional(bool)
+    name                                          = string
+    address_prefixes                              = list(string)
+    service_endpoints                             = optional(list(string))
+    service_endpoint_policy_ids                   = optional(list(string))
+    private_endpoint_network_policies_enabled     = optional(bool)
     private_link_service_network_policies_enabled = optional(bool)
-    delegation                                   = optional(list(object({
+    delegation = optional(list(object({
       name = string
       service_delegation = object({
         name    = string
         actions = optional(list(string))
       })
     })))
-    create_nsg  = optional(bool, false)
-    nsg_rules   = optional(list(object({
+    create_nsg = optional(bool, false)
+    nsg_rules = optional(list(object({
       name                                       = string
       priority                                   = number
       direction                                  = string

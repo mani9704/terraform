@@ -16,7 +16,7 @@ variable "diagnostic_settings" {
 
     # Log categories with retention policies
     log_categories = optional(list(object({
-      category      = string
+      category       = string
       category_group = optional(string, null)
       retention_policy = object({
         enabled = optional(bool, false)

@@ -43,7 +43,7 @@ output "app_service_identity" {
 
 output "app_service_principal_id" {
   description = "Principal ID of the App Service (if managed identity is enabled)"
-  value       = var.os_type == "Linux" ? azurerm_linux_web_app.app_service_linux[0].identity[0].principal_id : (length(azurerm_windows_web_app.app_service_windows[0].identity) > 0 ? azurerm_windows_web_app.app_service_windows[0].identity[0].principal_id : null)
+  value       = var.os_type == "Linux" ? (length(azurerm_linux_web_app.app_service_linux[0].identity) > 0 ? azurerm_linux_web_app.app_service_linux[0].identity[0].principal_id : null) : (length(azurerm_windows_web_app.app_service_windows[0].identity) > 0 ? azurerm_windows_web_app.app_service_windows[0].identity[0].principal_id : null)
 }
 
 output "app_service_url" {
@@ -56,7 +56,7 @@ output "deployment_slot_ids" {
   description = "Map of deployment slot names to their IDs"
   value = var.os_type == "Linux" ? {
     for k, v in azurerm_linux_web_app_slot.app_service_slots_linux : k => v.id
-  } : {
+    } : {
     for k, v in azurerm_windows_web_app_slot.app_service_slots_windows : k => v.id
   }
 }
@@ -65,7 +65,7 @@ output "deployment_slot_hostnames" {
   description = "Map of deployment slot names to their hostnames"
   value = var.os_type == "Linux" ? {
     for k, v in azurerm_linux_web_app_slot.app_service_slots_linux : k => v.default_hostname
-  } : {
+    } : {
     for k, v in azurerm_windows_web_app_slot.app_service_slots_windows : k => v.default_hostname
   }
 }
@@ -74,7 +74,7 @@ output "deployment_slot_urls" {
   description = "Map of deployment slot names to their URLs"
   value = var.os_type == "Linux" ? {
     for k, v in azurerm_linux_web_app_slot.app_service_slots_linux : k => "https://${v.default_hostname}"
-  } : {
+    } : {
     for k, v in azurerm_windows_web_app_slot.app_service_slots_windows : k => "https://${v.default_hostname}"
   }
 }

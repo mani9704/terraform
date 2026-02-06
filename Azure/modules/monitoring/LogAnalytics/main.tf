@@ -13,22 +13,22 @@ resource "azurerm_log_analytics_workspace" "law" {
   resource_group_name = var.resource_group_name
   sku                 = var.sku
   retention_in_days   = var.retention_in_days
-  
+
   # Optional: Allow resource only logs
   allow_resource_only_permissions = var.allow_resource_only_permissions
-  
+
   # Optional: Daily quota in GB
   daily_quota_gb = var.daily_quota_gb
-  
+
   # Optional: Internet ingestion enabled
   internet_ingestion_enabled = var.internet_ingestion_enabled
-  
+
   # Optional: Internet query enabled
   internet_query_enabled = var.internet_query_enabled
-  
+
   # Optional: Local authentication disabled
   local_authentication_disabled = var.local_authentication_disabled
-  
+
   # Optional: Reservation capacity in GB per day (reservation_capcity_in_gb_per_day)
   reservation_capacity_in_gb_per_day = var.reservation_capacity_in_gb_per_day
 

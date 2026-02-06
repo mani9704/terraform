@@ -54,8 +54,8 @@ variable "endpoint_enabled" {
 variable "origin_groups" {
   description = "List of origin groups (backend pools) for the Front Door"
   type = list(object({
-    name                                          = string
-    session_affinity_enabled                      = optional(bool, false)
+    name                                                      = string
+    session_affinity_enabled                                  = optional(bool, false)
     restore_traffic_time_to_healed_or_new_endpoint_in_minutes = optional(number, 10)
     load_balancing = optional(object({
       additional_latency_in_milliseconds = optional(number, 50)
@@ -76,17 +76,16 @@ variable "origin_groups" {
 variable "origins" {
   description = "List of origins (backends) for the Front Door. Can be Azure App Services, VMs, or external endpoints."
   type = list(object({
-    name                            = string
-    origin_group_name               = string
-    host_name                       = optional(string, null)  # Direct hostname/IP for external origins
-    target_resource_id              = optional(string, null)  # Azure resource ID (App Service or VM) - if provided, host_name is auto-detected
-    http_port                       = optional(number, 80)
-    https_port                      = optional(number, 443)
-    origin_host_header              = optional(string, null)
-    priority                        = optional(number, 1)
-    weight                          = optional(number, 1000)
-    enabled                         = optional(bool, true)
-    certificate_name_check_enabled  = optional(bool, true)
+    name                           = string
+    origin_group_name              = string
+    host_name                      = string # App Service default hostname, VM public IP, or external host
+    http_port                      = optional(number, 80)
+    https_port                     = optional(number, 443)
+    origin_host_header             = optional(string, null)
+    priority                       = optional(number, 1)
+    weight                         = optional(number, 1000)
+    enabled                        = optional(bool, true)
+    certificate_name_check_enabled = optional(bool, true)
     private_link = optional(object({
       location               = string
       private_link_target_id = string
@@ -101,13 +100,13 @@ variable "origins" {
 variable "custom_domains" {
   description = "List of custom domains for the Front Door"
   type = list(object({
-    name                     = string
-    host_name                = string
-    dns_zone_id              = optional(string, null)
+    name        = string
+    host_name   = string
+    dns_zone_id = optional(string, null)
     tls = optional(object({
-      certificate_type         = string
-      minimum_tls_version      = optional(string, "TLS12")
-      cdn_frontdoor_secret_id  = optional(string, null)
+      certificate_type        = string
+      minimum_tls_version     = optional(string, "TLS12")
+      cdn_frontdoor_secret_id = optional(string, null)
     }), null)
   }))
   default = []
@@ -117,11 +116,11 @@ variable "custom_domains" {
 variable "security_policies" {
   description = "List of security policies (WAF policies) to associate with Front Door. Each policy can have multiple associations."
   type = list(object({
-    name         = string
-    waf_policy_id = string  # Resource ID of the WAF policy
+    name          = string
+    waf_policy_id = string # Resource ID of the WAF policy
     associations = list(object({
-      custom_domain_names = optional(list(string), [])  # List of custom domain names to associate
-      patterns_to_match   = optional(list(string), ["/*"])  # URL patterns to match
+      custom_domain_names = optional(list(string), [])     # List of custom domain names to associate
+      patterns_to_match   = optional(list(string), ["/*"]) # URL patterns to match
     }))
   }))
   default = []
@@ -144,20 +143,20 @@ variable "waf_patterns_to_match" {
 variable "routes" {
   description = "List of routes (routing rules) for the Front Door"
   type = list(object({
-    name                    = string
-    origin_group_name       = string
-    origin_names            = list(string)
-    enabled                 = optional(bool, true)
-    forwarding_protocol     = optional(string, "MatchRequest")
-    https_redirect_enabled  = optional(bool, false)
-    patterns_to_match       = optional(list(string), ["/*"])
-    supported_protocols     = optional(list(string), ["Http", "Https"])
-    custom_domain_names     = optional(list(string), null)
+    name                   = string
+    origin_group_name      = string
+    origin_names           = list(string)
+    enabled                = optional(bool, true)
+    forwarding_protocol    = optional(string, "MatchRequest")
+    https_redirect_enabled = optional(bool, false)
+    patterns_to_match      = optional(list(string), ["/*"])
+    supported_protocols    = optional(list(string), ["Http", "Https"])
+    custom_domain_names    = optional(list(string), null)
     cache = optional(object({
       query_string_caching_behavior = optional(string, "IgnoreQueryString")
       query_strings                 = optional(list(string), null)
       compression_enabled           = optional(bool, true)
-      content_types_to_compress     = optional(list(string), [
+      content_types_to_compress = optional(list(string), [
         "text/html", "text/plain", "text/css", "text/javascript",
         "application/x-javascript", "application/javascript",
         "application/json", "application/xml"
@@ -180,60 +179,58 @@ variable "rule_sets" {
 variable "rules" {
   description = "List of rules for the Front Door (optional)"
   type = list(object({
-    name                = string
-    rule_set_name       = string
-    order               = optional(number, 1)
-    behavior_on_match   = optional(string, "Continue")
+    name              = string
+    rule_set_name     = string
+    order             = optional(number, 1)
+    behavior_on_match = optional(string, "Continue")
     conditions = optional(list(object({
       request_header = optional(object({
-        header_name      = string
-        operator         = string
-        match_values     = optional(list(string), [])
-        transform        = optional(list(string), [])
+        header_name        = string
+        operator           = string
+        match_values       = optional(list(string), [])
+        transform          = optional(list(string), [])
         negation_condition = optional(bool, false)
       }), null)
       request_method = optional(object({
-        operator         = string
-        match_values     = optional(list(string), [])
+        operator           = string
+        match_values       = optional(list(string), [])
         negation_condition = optional(bool, false)
       }), null)
       request_uri = optional(object({
-        operator         = string
-        match_values     = optional(list(string), [])
-        transform        = optional(list(string), [])
+        operator           = string
+        match_values       = optional(list(string), [])
+        transform          = optional(list(string), [])
         negation_condition = optional(bool, false)
       }), null)
       query_string = optional(object({
-        operator         = string
-        match_values     = optional(list(string), [])
-        transform        = optional(list(string), [])
+        operator           = string
+        match_values       = optional(list(string), [])
+        transform          = optional(list(string), [])
         negation_condition = optional(bool, false)
       }), null)
       remote_address = optional(object({
-        operator         = string
-        match_values     = optional(list(string), [])
+        operator           = string
+        match_values       = optional(list(string), [])
         negation_condition = optional(bool, false)
       }), null)
       request_body = optional(object({
-        operator         = string
-        match_values     = optional(list(string), [])
-        transform        = optional(list(string), [])
-        match_variable   = optional(string, null)
+        operator           = string
+        match_values       = optional(list(string), [])
+        transform          = optional(list(string), [])
         negation_condition = optional(bool, false)
       }), null)
     })), [])
     actions = optional(list(object({
       route_configuration_override = optional(object({
-        origin_group_name            = optional(string, null)
-        forwarding_protocol          = optional(string, null)
+        origin_group_name             = optional(string, null)
+        forwarding_protocol           = optional(string, null)
         query_string_caching_behavior = optional(string, null)
-        compression_enabled          = optional(bool, null)
-        cache_behavior               = optional(string, null)
-        cache_duration               = optional(string, null)
+        compression_enabled           = optional(bool, null)
+        cache_behavior                = optional(string, null)
+        cache_duration                = optional(string, null)
       }), null)
       url_redirect = optional(object({
         redirect_type        = string
-        destination_protocol = optional(string, "MatchRequest")
         destination_path     = optional(string, null)
         destination_hostname = optional(string, null)
         destination_fragment = optional(string, null)
@@ -251,10 +248,9 @@ variable "rules" {
         value         = optional(string, null)
       }), null)
       response_header = optional(object({
-        header_action      = string
-        header_name        = string
-        value              = optional(string, null)
-        overwrite_if_exists = optional(bool, false)
+        header_action = string
+        header_name   = string
+        value         = optional(string, null)
       }), null)
     })), [])
   }))

@@ -92,10 +92,10 @@ variable "web_tests" {
   description = "List of Application Insights Web Tests (Availability Tests) to create"
   type = list(object({
     name          = string
-    kind          = string # "ping" or "multistep"
-    configuration = string # XML configuration for the test
+    kind          = string                # "ping" or "multistep"
+    configuration = string                # XML configuration for the test
     frequency     = optional(number, 300) # Test frequency in seconds
-    timeout       = optional(number, 60) # Test timeout in seconds
+    timeout       = optional(number, 60)  # Test timeout in seconds
     enabled       = optional(bool, true)
     geo_locations = optional(list(string), ["us-ca-sjc-azr"])
     retry_enabled = optional(bool, false)
@@ -109,7 +109,7 @@ variable "web_tests" {
 variable "api_keys" {
   description = "List of API keys to create for Application Insights"
   type = list(object({
-    name             = string
+    name              = string
     read_permissions  = optional(list(string), [])
     write_permissions = optional(list(string), [])
   }))
@@ -120,10 +120,10 @@ variable "api_keys" {
 variable "smart_detection_rules" {
   description = "List of Smart Detection Rules to configure"
   type = list(object({
-    name                            = string
-    enabled                         = optional(bool, true)
+    name                               = string
+    enabled                            = optional(bool, true)
     send_emails_to_subscription_owners = optional(bool, false)
-    additional_email_recipients     = optional(list(string), [])
+    additional_email_recipients        = optional(list(string), [])
   }))
   default = []
 }

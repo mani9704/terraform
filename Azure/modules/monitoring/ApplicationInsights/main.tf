@@ -61,15 +61,10 @@ resource "azurerm_application_insights_api_key" "api_keys" {
 resource "azurerm_application_insights_smart_detection_rule" "smart_detection_rules" {
   for_each = { for rule in var.smart_detection_rules : rule.name => rule }
 
-  name                    = each.value.name
-  application_insights_id = azurerm_application_insights.appinsights.id
-  enabled                 = lookup(each.value, "enabled", true)
+  name                               = each.value.name
+  application_insights_id            = azurerm_application_insights.appinsights.id
+  enabled                            = lookup(each.value, "enabled", true)
   send_emails_to_subscription_owners = lookup(each.value, "send_emails_to_subscription_owners", false)
-  
-  dynamic "additional_email_recipients" {
-    for_each = lookup(each.value, "additional_email_recipients", [])
-    content {
-      email_address = additional_email_recipients.value
-    }
-  }
+
+  additional_email_recipients = lookup(each.value, "additional_email_recipients", [])
 }

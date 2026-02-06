@@ -3,10 +3,10 @@ output "virtual_networks" {
   description = "Map of all virtual networks"
   value = {
     for k, v in module.virtual_network : k => {
-      id        = v.virtual_network_id
-      name      = v.virtual_network_name
+      id         = v.virtual_network_id
+      name       = v.virtual_network_name
       subnet_ids = v.subnet_ids
-      nsg_ids   = v.network_security_group_ids
+      nsg_ids    = v.network_security_group_ids
     }
   }
 }
@@ -16,12 +16,12 @@ output "virtual_machines" {
   description = "Map of all virtual machines"
   value = {
     for k, v in module.virtual_machine : k => {
-      id                  = v.vm_id
-      name                = v.vm_name
-      public_ip          = v.vm_public_ip
-      private_ip         = v.vm_private_ip
-      ssh_command        = v.ssh_connection_command
-      rdp_command        = v.rdp_connection_command
+      id                   = v.vm_id
+      name                 = v.vm_name
+      public_ip            = v.vm_public_ip
+      private_ip           = v.vm_private_ip
+      ssh_command          = v.ssh_connection_command
+      rdp_command          = v.rdp_connection_command
       network_interface_id = v.network_interface_id
     }
   }
@@ -59,12 +59,12 @@ output "traffic_managers" {
   description = "Map of all Traffic Manager profiles"
   value = {
     for k, v in module.traffic_manager : k => {
-      id                        = v.traffic_manager_profile_id
-      name                      = v.traffic_manager_profile_name
-      fqdn                      = v.fqdn
-      traffic_routing_method    = v.traffic_routing_method
-      all_endpoints             = v.all_endpoints
-      monitor_config            = v.monitor_config
+      id                     = v.traffic_manager_profile_id
+      name                   = v.traffic_manager_profile_name
+      fqdn                   = v.fqdn
+      traffic_routing_method = v.traffic_routing_method
+      all_endpoints          = v.all_endpoints
+      monitor_config         = v.monitor_config
     }
   }
 }
@@ -81,14 +81,14 @@ output "front_doors" {
   description = "Map of all Front Door profiles"
   value = {
     for k, v in module.front_door : k => {
-      id                        = v.front_door_profile_id
-      name                      = v.front_door_profile_name
-      endpoint_host_name        = v.front_door_endpoint_host_name
-      front_door_url            = v.front_door_url
-      origin_group_ids          = v.origin_group_ids
-      origin_ids                = v.origin_ids
-      custom_domain_ids         = v.custom_domain_ids
-      route_ids                 = v.route_ids
+      id                 = v.front_door_profile_id
+      name               = v.front_door_profile_name
+      endpoint_host_name = v.front_door_endpoint_host_name
+      front_door_url     = v.front_door_url
+      origin_group_ids   = v.origin_group_ids
+      origin_ids         = v.origin_ids
+      custom_domain_ids  = v.custom_domain_ids
+      route_ids          = v.route_ids
     }
   }
 }
@@ -112,12 +112,12 @@ output "app_services" {
   description = "Map of all App Services"
   value = {
     for k, v in module.app_service : k => {
-      id                = v.app_service_id
-      name              = v.app_service_name
-      default_host_name = v.app_service_default_host_name
-      app_service_url   = v.app_service_url
+      id                  = v.app_service_id
+      name                = v.app_service_name
+      default_host_name   = v.app_service_default_host_name
+      app_service_url     = v.app_service_url
       app_service_plan_id = v.app_service_plan_id
-      principal_id      = v.app_service_principal_id
+      principal_id        = v.app_service_principal_id
     }
   }
 }
@@ -141,9 +141,9 @@ output "app_service_deployment_slots" {
   description = "Map of App Service keys to their deployment slots"
   value = {
     for k, v in module.app_service : k => {
-      slot_ids      = v.deployment_slot_ids
+      slot_ids       = v.deployment_slot_ids
       slot_hostnames = v.deployment_slot_hostnames
-      slot_urls     = v.deployment_slot_urls
+      slot_urls      = v.deployment_slot_urls
     }
   }
 }
@@ -157,11 +157,10 @@ output "log_analytics_workspaces" {
   description = "Map of Log Analytics Workspace keys to their details"
   value = {
     for k, v in module.log_analytics_workspace : k => {
-      id              = v.log_analytics_workspace_id
-      name            = v.log_analytics_workspace_name
-      workspace_id    = v.log_analytics_workspace_workspace_id
-      portal_url      = v.log_analytics_workspace_portal_url
-      solution_ids    = v.solution_ids
+      id           = v.log_analytics_workspace_id
+      name         = v.log_analytics_workspace_name
+      workspace_id = v.log_analytics_workspace_workspace_id
+      solution_ids = v.solution_ids
     }
   }
 }
@@ -171,13 +170,13 @@ output "application_insights" {
   description = "Map of Application Insights keys to their details"
   value = {
     for k, v in module.application_insights : k => {
-      id                 = v.application_insights_id
-      name               = v.application_insights_name
-      app_id             = v.application_insights_app_id
-      instrumentation_key = v.application_insights_instrumentation_key
-      connection_string  = v.application_insights_connection_string
-      web_test_ids       = v.web_test_ids
-      api_key_ids        = v.api_key_ids
+      id                       = v.application_insights_id
+      name                     = v.application_insights_name
+      app_id                   = v.application_insights_app_id
+      instrumentation_key      = v.application_insights_instrumentation_key
+      connection_string        = v.application_insights_connection_string
+      web_test_ids             = v.web_test_ids
+      api_key_ids              = v.api_key_ids
       smart_detection_rule_ids = v.smart_detection_rule_ids
     }
   }

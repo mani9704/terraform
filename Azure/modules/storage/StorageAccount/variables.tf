@@ -146,11 +146,13 @@ variable "queue_properties" {
   type = object({
     hour_metrics = optional(object({
       enabled               = bool
+      version               = optional(string, "1.0")
       include_apis          = optional(bool, true)
       retention_policy_days = optional(number, 7)
     }), null)
     minute_metrics = optional(object({
       enabled               = bool
+      version               = optional(string, "1.0")
       include_apis          = optional(bool, true)
       retention_policy_days = optional(number, 7)
     }), null)
@@ -199,9 +201,9 @@ variable "routing" {
 variable "containers" {
   description = "List of storage containers to create"
   type = list(object({
-    name                 = string
+    name                  = string
     container_access_type = optional(string, "private") # private, blob, container
-    metadata             = optional(map(string), null)
+    metadata              = optional(map(string), null)
   }))
   default = []
 }
@@ -210,11 +212,11 @@ variable "containers" {
 variable "file_shares" {
   description = "List of file shares to create (used for App Service storage mounts)"
   type = list(object({
-    name          = string
-    quota         = optional(number, 5120) # Size in GB (default 5GB, max 102400GB)
-    access_tier   = optional(string, "TransactionOptimized") # TransactionOptimized, Hot, Cool
-    enabled_protocol = optional(string, "SMB") # SMB or NFS
-    metadata      = optional(map(string), null)
+    name             = string
+    quota            = optional(number, 5120)                   # Size in GB (default 5GB, max 102400GB)
+    access_tier      = optional(string, "TransactionOptimized") # TransactionOptimized, Hot, Cool
+    enabled_protocol = optional(string, "SMB")                  # SMB or NFS
+    metadata         = optional(map(string), null)
   }))
   default = []
 }

@@ -8,11 +8,11 @@ resource "azurerm_resource_group" "fd_rg" {
 
 # Create Front Door Profile
 resource "azurerm_cdn_frontdoor_profile" "fd_profile" {
-  name                = var.front_door_profile_name
-  resource_group_name = var.resource_group_name
-  sku_name            = var.sku_name
+  name                     = var.front_door_profile_name
+  resource_group_name      = var.resource_group_name
+  sku_name                 = var.sku_name
   response_timeout_seconds = var.response_timeout_seconds
-  tags                = var.tags
+  tags                     = var.tags
 }
 
 # Create Front Door Origin Group
@@ -41,7 +41,7 @@ resource "azurerm_cdn_frontdoor_origin_group" "fd_origin_groups" {
     }
   }
 
-  session_affinity_enabled = lookup(each.value, "session_affinity_enabled", false)
+  session_affinity_enabled                                  = lookup(each.value, "session_affinity_enabled", false)
   restore_traffic_time_to_healed_or_new_endpoint_in_minutes = lookup(each.value, "restore_traffic_time_to_healed_or_new_endpoint_in_minutes", 10)
 }
 
@@ -52,10 +52,9 @@ resource "azurerm_cdn_frontdoor_origin" "fd_origins" {
   name                          = each.value.name
   cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.fd_origin_groups[each.value.origin_group_name].id
 
-  # If target_resource_id (App Service/VM) is provided, use it; otherwise use host_name
-  target_resource_id = lookup(each.value, "target_resource_id", null)
-  host_name          = lookup(each.value, "target_resource_id", null) == null ? each.value.host_name : null
-  
+  # Hostname for the origin (App Service default hostname, VM public IP, or external host)
+  host_name = each.value.host_name
+
   http_port          = lookup(each.value, "http_port", 80)
   https_port         = lookup(each.value, "https_port", 443)
   origin_host_header = lookup(each.value, "origin_host_header", null)
@@ -68,10 +67,10 @@ resource "azurerm_cdn_frontdoor_origin" "fd_origins" {
   dynamic "private_link" {
     for_each = lookup(each.value, "private_link", null) != null ? [each.value.private_link] : []
     content {
-      location                  = private_link.value.location
-      private_link_target_id    = private_link.value.private_link_target_id
-      request_message           = lookup(private_link.value, "request_message", "Please approve")
-      target_type               = lookup(private_link.value, "target_type", null)
+      location               = private_link.value.location
+      private_link_target_id = private_link.value.private_link_target_id
+      request_message        = lookup(private_link.value, "request_message", "Please approve")
+      target_type            = lookup(private_link.value, "target_type", null)
     }
   }
 }
@@ -95,8 +94,8 @@ resource "azurerm_cdn_frontdoor_custom_domain" "fd_custom_domains" {
   dynamic "tls" {
     for_each = lookup(each.value, "tls", null) != null ? [each.value.tls] : []
     content {
-      certificate_type    = tls.value.certificate_type
-      minimum_tls_version = lookup(tls.value, "minimum_tls_version", "TLS12")
+      certificate_type        = tls.value.certificate_type
+      minimum_tls_version     = lookup(tls.value, "minimum_tls_version", "TLS12")
       cdn_frontdoor_secret_id = lookup(tls.value, "cdn_frontdoor_secret_id", null)
     }
   }
@@ -121,10 +120,11 @@ resource "azurerm_cdn_frontdoor_security_policy" "fd_security_policies" {
       dynamic "association" {
         for_each = each.value.associations
         content {
-          domain {
-            cdn_frontdoor_domain_id = lookup(association.value, "custom_domain_names", null) != null && length(association.value.custom_domain_names) > 0 ? [
-              for domain_name in association.value.custom_domain_names : azurerm_cdn_frontdoor_custom_domain.fd_custom_domains[domain_name].id
-            ] : []
+          dynamic "domain" {
+            for_each = lookup(association.value, "custom_domain_names", [])
+            content {
+              cdn_frontdoor_domain_id = azurerm_cdn_frontdoor_custom_domain.fd_custom_domains[domain.value].id
+            }
           }
           patterns_to_match = lookup(association.value, "patterns_to_match", ["/*"])
         }
@@ -145,8 +145,11 @@ resource "azurerm_cdn_frontdoor_security_policy" "fd_security_policy_legacy" {
       cdn_frontdoor_firewall_policy_id = var.waf_policy_id
 
       association {
-        domain {
-          cdn_frontdoor_domain_id = [for domain in azurerm_cdn_frontdoor_custom_domain.fd_custom_domains : domain.id]
+        dynamic "domain" {
+          for_each = azurerm_cdn_frontdoor_custom_domain.fd_custom_domains
+          content {
+            cdn_frontdoor_domain_id = domain.value.id
+          }
         }
         patterns_to_match = var.waf_patterns_to_match
       }
@@ -163,11 +166,11 @@ resource "azurerm_cdn_frontdoor_route" "fd_routes" {
   cdn_frontdoor_origin_group_id = azurerm_cdn_frontdoor_origin_group.fd_origin_groups[each.value.origin_group_name].id
   cdn_frontdoor_origin_ids      = [for origin_name in each.value.origin_names : azurerm_cdn_frontdoor_origin.fd_origins[origin_name].id]
 
-  enabled                        = lookup(each.value, "enabled", true)
-  forwarding_protocol            = lookup(each.value, "forwarding_protocol", "MatchRequest")
-  https_redirect_enabled         = lookup(each.value, "https_redirect_enabled", false)
-  patterns_to_match              = lookup(each.value, "patterns_to_match", ["/*"])
-  supported_protocols            = lookup(each.value, "supported_protocols", ["Http", "Https"])
+  enabled                = lookup(each.value, "enabled", true)
+  forwarding_protocol    = lookup(each.value, "forwarding_protocol", "MatchRequest")
+  https_redirect_enabled = lookup(each.value, "https_redirect_enabled", false)
+  patterns_to_match      = lookup(each.value, "patterns_to_match", ["/*"])
+  supported_protocols    = lookup(each.value, "supported_protocols", ["Http", "Https"])
   cdn_frontdoor_custom_domain_ids = lookup(each.value, "custom_domain_names", null) != null ? [
     for domain_name in each.value.custom_domain_names : azurerm_cdn_frontdoor_custom_domain.fd_custom_domains[domain_name].id
   ] : []
@@ -205,63 +208,62 @@ resource "azurerm_cdn_frontdoor_rule" "fd_rules" {
   dynamic "conditions" {
     for_each = lookup(each.value, "conditions", [])
     content {
-      dynamic "request_header" {
+      dynamic "request_header_condition" {
         for_each = lookup(conditions.value, "request_header", null) != null ? [conditions.value.request_header] : []
         content {
-          header_name = request_header.value.header_name
-          operator    = request_header.value.operator
-          match_values = lookup(request_header.value, "match_values", [])
-          transform   = lookup(request_header.value, "transform", [])
-          negation_condition = lookup(request_header.value, "negation_condition", false)
+          header_name      = request_header_condition.value.header_name
+          operator         = request_header_condition.value.operator
+          match_values     = lookup(request_header_condition.value, "match_values", [])
+          transforms       = lookup(request_header_condition.value, "transform", [])
+          negate_condition = lookup(request_header_condition.value, "negation_condition", false)
         }
       }
 
-      dynamic "request_method" {
+      dynamic "request_method_condition" {
         for_each = lookup(conditions.value, "request_method", null) != null ? [conditions.value.request_method] : []
         content {
-          operator    = request_method.value.operator
-          match_values = lookup(request_method.value, "match_values", [])
-          negation_condition = lookup(request_method.value, "negation_condition", false)
+          operator         = request_method_condition.value.operator
+          match_values     = lookup(request_method_condition.value, "match_values", [])
+          negate_condition = lookup(request_method_condition.value, "negation_condition", false)
         }
       }
 
-      dynamic "request_uri" {
+      dynamic "request_uri_condition" {
         for_each = lookup(conditions.value, "request_uri", null) != null ? [conditions.value.request_uri] : []
         content {
-          operator    = request_uri.value.operator
-          match_values = lookup(request_uri.value, "match_values", [])
-          transform   = lookup(request_uri.value, "transform", [])
-          negation_condition = lookup(request_uri.value, "negation_condition", false)
+          operator         = request_uri_condition.value.operator
+          match_values     = lookup(request_uri_condition.value, "match_values", [])
+          transforms       = lookup(request_uri_condition.value, "transform", [])
+          negate_condition = lookup(request_uri_condition.value, "negation_condition", false)
         }
       }
 
-      dynamic "query_string" {
+      dynamic "query_string_condition" {
         for_each = lookup(conditions.value, "query_string", null) != null ? [conditions.value.query_string] : []
         content {
-          operator    = query_string.value.operator
-          match_values = lookup(query_string.value, "match_values", [])
-          transform   = lookup(query_string.value, "transform", [])
-          negation_condition = lookup(query_string.value, "negation_condition", false)
+          operator         = query_string_condition.value.operator
+          match_values     = lookup(query_string_condition.value, "match_values", [])
+          transforms       = lookup(query_string_condition.value, "transform", [])
+          negate_condition = lookup(query_string_condition.value, "negation_condition", false)
         }
       }
 
-      dynamic "remote_address" {
+      dynamic "remote_address_condition" {
         for_each = lookup(conditions.value, "remote_address", null) != null ? [conditions.value.remote_address] : []
         content {
-          operator    = remote_address.value.operator
-          match_values = lookup(remote_address.value, "match_values", [])
-          negation_condition = lookup(remote_address.value, "negation_condition", false)
+          operator         = remote_address_condition.value.operator
+          match_values     = lookup(remote_address_condition.value, "match_values", [])
+          negate_condition = lookup(remote_address_condition.value, "negation_condition", false)
         }
       }
 
-      dynamic "request_body" {
+      dynamic "request_body_condition" {
         for_each = lookup(conditions.value, "request_body", null) != null ? [conditions.value.request_body] : []
         content {
-          operator    = request_body.value.operator
-          match_values = lookup(request_body.value, "match_values", [])
-          transform   = lookup(request_body.value, "transform", [])
-          match_variable = lookup(request_body.value, "match_variable", null)
-          negation_condition = lookup(request_body.value, "negation_condition", false)
+          operator         = request_body_condition.value.operator
+          match_values     = lookup(request_body_condition.value, "match_values", [])
+          transforms       = lookup(request_body_condition.value, "transform", [])
+          negate_condition = lookup(request_body_condition.value, "negation_condition", false)
         }
       }
     }
@@ -273,12 +275,13 @@ resource "azurerm_cdn_frontdoor_rule" "fd_rules" {
       dynamic "route_configuration_override_action" {
         for_each = lookup(actions.value, "route_configuration_override", null) != null ? [actions.value.route_configuration_override] : []
         content {
-          origin_group_id = route_configuration_override_action.value.origin_group_name != null ? azurerm_cdn_frontdoor_origin_group.fd_origin_groups[route_configuration_override_action.value.origin_group_name].id : null
-          forwarding_protocol = lookup(route_configuration_override_action.value, "forwarding_protocol", null)
+          cdn_frontdoor_origin_group_id = route_configuration_override_action.value.origin_group_name != null ? azurerm_cdn_frontdoor_origin_group.fd_origin_groups[route_configuration_override_action.value.origin_group_name].id : null
+          forwarding_protocol           = lookup(route_configuration_override_action.value, "forwarding_protocol", null)
           query_string_caching_behavior = lookup(route_configuration_override_action.value, "query_string_caching_behavior", null)
-          compression_enabled = lookup(route_configuration_override_action.value, "compression_enabled", null)
-          cache_behavior = lookup(route_configuration_override_action.value, "cache_behavior", null)
-          cache_duration = lookup(route_configuration_override_action.value, "cache_duration", null)
+          query_string_parameters       = lookup(route_configuration_override_action.value, "query_string_parameters", null)
+          compression_enabled           = lookup(route_configuration_override_action.value, "compression_enabled", null)
+          cache_behavior                = lookup(route_configuration_override_action.value, "cache_behavior", null)
+          cache_duration                = lookup(route_configuration_override_action.value, "cache_duration", null)
         }
       }
 
@@ -286,7 +289,6 @@ resource "azurerm_cdn_frontdoor_rule" "fd_rules" {
         for_each = lookup(actions.value, "url_redirect", null) != null ? [actions.value.url_redirect] : []
         content {
           redirect_type        = url_redirect_action.value.redirect_type
-          destination_protocol = lookup(url_redirect_action.value, "destination_protocol", "MatchRequest")
           destination_path     = lookup(url_redirect_action.value, "destination_path", null)
           destination_hostname = lookup(url_redirect_action.value, "destination_hostname", null)
           destination_fragment = lookup(url_redirect_action.value, "destination_fragment", null)
@@ -298,8 +300,8 @@ resource "azurerm_cdn_frontdoor_rule" "fd_rules" {
       dynamic "url_rewrite_action" {
         for_each = lookup(actions.value, "url_rewrite", null) != null ? [actions.value.url_rewrite] : []
         content {
-          source_pattern      = url_rewrite_action.value.source_pattern
-          destination         = url_rewrite_action.value.destination
+          source_pattern          = url_rewrite_action.value.source_pattern
+          destination             = url_rewrite_action.value.destination
           preserve_unmatched_path = lookup(url_rewrite_action.value, "preserve_unmatched_path", false)
         }
       }
@@ -319,7 +321,6 @@ resource "azurerm_cdn_frontdoor_rule" "fd_rules" {
           header_action = response_header_action.value.header_action
           header_name   = response_header_action.value.header_name
           value         = lookup(response_header_action.value, "value", null)
-          overwrite_if_exists = lookup(response_header_action.value, "overwrite_if_exists", false)
         }
       }
     }

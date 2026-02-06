@@ -46,9 +46,7 @@ resource "azurerm_traffic_manager_azure_endpoint" "azure_endpoints" {
   }
 
   name               = each.value.name
-  resource_group_name = var.resource_group_name
-  profile_name       = azurerm_traffic_manager_profile.tm_profile.name
-  type               = "Microsoft.Network/trafficManagerProfiles/azureEndpoints"
+  profile_id         = azurerm_traffic_manager_profile.tm_profile.id
   target_resource_id = each.value.target_resource_id
   weight             = lookup(each.value, "weight", 1)
   priority           = lookup(each.value, "priority", null)
@@ -78,14 +76,12 @@ resource "azurerm_traffic_manager_external_endpoint" "external_endpoints" {
     if endpoint.type == "external"
   }
 
-  name                = each.value.name
-  resource_group_name = var.resource_group_name
-  profile_name        = azurerm_traffic_manager_profile.tm_profile.name
-  type                = "Microsoft.Network/trafficManagerProfiles/externalEndpoints"
-  target              = each.value.target
-  weight              = lookup(each.value, "weight", 1)
-  priority            = lookup(each.value, "priority", null)
-  enabled             = lookup(each.value, "enabled", true)
+  name       = each.value.name
+  profile_id = azurerm_traffic_manager_profile.tm_profile.id
+  target     = each.value.target
+  weight     = lookup(each.value, "weight", 1)
+  priority   = lookup(each.value, "priority", null)
+  enabled    = lookup(each.value, "enabled", true)
 
   dynamic "custom_header" {
     for_each = lookup(each.value, "custom_headers", [])
@@ -111,15 +107,13 @@ resource "azurerm_traffic_manager_nested_endpoint" "nested_endpoints" {
     if endpoint.type == "nested"
   }
 
-  name                = each.value.name
-  resource_group_name = var.resource_group_name
-  profile_name        = azurerm_traffic_manager_profile.tm_profile.name
-  type                = "Microsoft.Network/trafficManagerProfiles/nestedEndpoints"
-  target_resource_id  = each.value.target_resource_id
-  weight              = lookup(each.value, "weight", 1)
-  priority            = lookup(each.value, "priority", null)
-  enabled             = lookup(each.value, "enabled", true)
-  minimum_child_endpoints = lookup(each.value, "minimum_child_endpoints", 1)
+  name                                  = each.value.name
+  profile_id                            = azurerm_traffic_manager_profile.tm_profile.id
+  target_resource_id                    = each.value.target_resource_id
+  weight                                = lookup(each.value, "weight", 1)
+  priority                              = lookup(each.value, "priority", null)
+  enabled                               = lookup(each.value, "enabled", true)
+  minimum_child_endpoints               = lookup(each.value, "minimum_child_endpoints", 1)
   minimum_required_child_endpoints_ipv4 = lookup(each.value, "minimum_required_child_endpoints_ipv4", null)
   minimum_required_child_endpoints_ipv6 = lookup(each.value, "minimum_required_child_endpoints_ipv6", null)
 

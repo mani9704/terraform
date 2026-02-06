@@ -20,11 +20,6 @@ output "front_door_profile_name" {
   value       = azurerm_cdn_frontdoor_profile.fd_profile.name
 }
 
-output "resource_usage" {
-  description = "Resource usage of the Front Door profile"
-  value       = azurerm_cdn_frontdoor_profile.fd_profile.resource_usage
-}
-
 # Front Door Endpoint Outputs
 output "front_door_endpoint_id" {
   description = "ID of the Front Door endpoint"

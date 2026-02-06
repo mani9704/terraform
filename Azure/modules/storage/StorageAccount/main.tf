@@ -14,32 +14,38 @@ resource "azurerm_storage_account" "storage_account" {
   account_tier             = var.account_tier
   account_replication_type = var.account_replication_type
   account_kind             = var.account_kind
-  
+
   # Access tier
   access_tier = var.access_tier
-  
+
   # Enable/Disable features
-  enable_https_traffic_only          = var.enable_https_traffic_only
-  min_tls_version                    = var.min_tls_version
-  allow_nested_items_to_be_public    = var.allow_nested_items_to_be_public
-  shared_access_key_enabled          = var.shared_access_key_enabled
-  public_network_access_enabled      = var.public_network_access_enabled
-  default_to_oauth_authentication    = var.default_to_oauth_authentication
-  
+  enable_https_traffic_only       = var.enable_https_traffic_only
+  min_tls_version                 = var.min_tls_version
+  allow_nested_items_to_be_public = var.allow_nested_items_to_be_public
+  shared_access_key_enabled       = var.shared_access_key_enabled
+  public_network_access_enabled   = var.public_network_access_enabled
+  default_to_oauth_authentication = var.default_to_oauth_authentication
+
   # Cross Tenant Replication
   cross_tenant_replication_enabled = var.cross_tenant_replication_enabled
-  
+
   # Custom Domain
-  custom_domain {
-    name          = var.custom_domain.name
-    use_subdomain = lookup(var.custom_domain, "use_subdomain", null)
-  } if var.custom_domain != null
+  dynamic "custom_domain" {
+    for_each = var.custom_domain != null ? [var.custom_domain] : []
+    content {
+      name          = custom_domain.value.name
+      use_subdomain = lookup(custom_domain.value, "use_subdomain", null)
+    }
+  }
 
   # Customer Managed Key (CMK)
-  customer_managed_key {
-    key_vault_key_id          = var.customer_managed_key.key_vault_key_id
-    user_assigned_identity_id = lookup(var.customer_managed_key, "user_assigned_identity_id", null)
-  } if var.customer_managed_key != null
+  dynamic "customer_managed_key" {
+    for_each = var.customer_managed_key != null ? [var.customer_managed_key] : []
+    content {
+      key_vault_key_id          = customer_managed_key.value.key_vault_key_id
+      user_assigned_identity_id = lookup(customer_managed_key.value, "user_assigned_identity_id", null)
+    }
+  }
 
   # Identity
   dynamic "identity" {
@@ -51,63 +57,89 @@ resource "azurerm_storage_account" "storage_account" {
   }
 
   # Blob Properties
-  blob_properties {
-    versioning_enabled       = lookup(var.blob_properties, "versioning_enabled", false)
-    change_feed_enabled      = lookup(var.blob_properties, "change_feed_enabled", false)
-    default_service_version  = lookup(var.blob_properties, "default_service_version", null)
-    last_access_time_enabled = lookup(var.blob_properties, "last_access_time_enabled", false)
-    
-    # Delete Retention Policy
-    delete_retention_policy {
-      days = lookup(var.blob_properties.delete_retention_policy, "days", 7)
-    } if lookup(var.blob_properties, "delete_retention_policy", null) != null
-    
-    # Container Delete Retention Policy
-    container_delete_retention_policy {
-      days = lookup(var.blob_properties.container_delete_retention_policy, "days", 7)
-    } if lookup(var.blob_properties, "container_delete_retention_policy", null) != null
-    
-    # CORS Rules
-    dynamic "cors_rule" {
-      for_each = lookup(var.blob_properties, "cors_rules", [])
-      content {
-        allowed_headers    = cors_rule.value.allowed_headers
-        allowed_methods    = cors_rule.value.allowed_methods
-        allowed_origins    = cors_rule.value.allowed_origins
-        exposed_headers    = lookup(cors_rule.value, "exposed_headers", [])
-        max_age_in_seconds = lookup(cors_rule.value, "max_age_in_seconds", 0)
+  dynamic "blob_properties" {
+    for_each = var.blob_properties != null ? [var.blob_properties] : []
+    content {
+      versioning_enabled       = lookup(blob_properties.value, "versioning_enabled", false)
+      change_feed_enabled      = lookup(blob_properties.value, "change_feed_enabled", false)
+      default_service_version  = lookup(blob_properties.value, "default_service_version", null)
+      last_access_time_enabled = lookup(blob_properties.value, "last_access_time_enabled", false)
+
+      # Delete Retention Policy
+      dynamic "delete_retention_policy" {
+        for_each = lookup(blob_properties.value, "delete_retention_policy", null) != null ? [blob_properties.value.delete_retention_policy] : []
+        content {
+          days = lookup(delete_retention_policy.value, "days", 7)
+        }
+      }
+
+      # Container Delete Retention Policy
+      dynamic "container_delete_retention_policy" {
+        for_each = lookup(blob_properties.value, "container_delete_retention_policy", null) != null ? [blob_properties.value.container_delete_retention_policy] : []
+        content {
+          days = lookup(container_delete_retention_policy.value, "days", 7)
+        }
+      }
+
+      # CORS Rules
+      dynamic "cors_rule" {
+        for_each = lookup(blob_properties.value, "cors_rules", [])
+        content {
+          allowed_headers    = cors_rule.value.allowed_headers
+          allowed_methods    = cors_rule.value.allowed_methods
+          allowed_origins    = cors_rule.value.allowed_origins
+          exposed_headers    = lookup(cors_rule.value, "exposed_headers", [])
+          max_age_in_seconds = lookup(cors_rule.value, "max_age_in_seconds", 0)
+        }
       }
     }
-  } if var.blob_properties != null
+  }
 
   # Queue Properties
-  queue_properties {
-    hour_metrics {
-      enabled               = lookup(var.queue_properties.hour_metrics, "enabled", true)
-      include_apis          = lookup(var.queue_properties.hour_metrics, "include_apis", true)
-      retention_policy_days = lookup(var.queue_properties.hour_metrics, "retention_policy_days", 7)
-    } if lookup(var.queue_properties, "hour_metrics", null) != null
-    
-    minute_metrics {
-      enabled               = lookup(var.queue_properties.minute_metrics, "enabled", false)
-      include_apis          = lookup(var.queue_properties.minute_metrics, "include_apis", true)
-      retention_policy_days = lookup(var.queue_properties.minute_metrics, "retention_policy_days", 7)
-    } if lookup(var.queue_properties, "minute_metrics", null) != null
-    
-    logging {
-      delete                = lookup(var.queue_properties.logging, "delete", false)
-      read                  = lookup(var.queue_properties.logging, "read", false)
-      version               = lookup(var.queue_properties.logging, "version", "1.0")
-      write                 = lookup(var.queue_properties.logging, "write", false)
-      retention_policy_days = lookup(var.queue_properties.logging, "retention_policy_days", 7)
-    } if lookup(var.queue_properties, "logging", null) != null
-  } if var.queue_properties != null
+  dynamic "queue_properties" {
+    for_each = var.queue_properties != null ? [var.queue_properties] : []
+    content {
+      dynamic "hour_metrics" {
+        for_each = lookup(queue_properties.value, "hour_metrics", null) != null ? [queue_properties.value.hour_metrics] : []
+        content {
+          version               = lookup(hour_metrics.value, "version", "1.0")
+          enabled               = hour_metrics.value.enabled
+          include_apis          = lookup(hour_metrics.value, "include_apis", true)
+          retention_policy_days = lookup(hour_metrics.value, "retention_policy_days", 7)
+        }
+      }
+
+      dynamic "minute_metrics" {
+        for_each = lookup(queue_properties.value, "minute_metrics", null) != null ? [queue_properties.value.minute_metrics] : []
+        content {
+          version               = lookup(minute_metrics.value, "version", "1.0")
+          enabled               = minute_metrics.value.enabled
+          include_apis          = lookup(minute_metrics.value, "include_apis", true)
+          retention_policy_days = lookup(minute_metrics.value, "retention_policy_days", 7)
+        }
+      }
+
+      dynamic "logging" {
+        for_each = lookup(queue_properties.value, "logging", null) != null ? [queue_properties.value.logging] : []
+        content {
+          delete                = logging.value.delete
+          read                  = logging.value.read
+          version               = lookup(logging.value, "version", "1.0")
+          write                 = logging.value.write
+          retention_policy_days = lookup(logging.value, "retention_policy_days", 7)
+        }
+      }
+    }
+  }
 
   # Static Website
-  static_website {
-    index_document     = var.static_website.index_document
-    error_404_document = lookup(var.static_website, "error_404_document", null)
-  } if var.static_website != null
+  dynamic "static_website" {
+    for_each = var.static_website != null ? [var.static_website] : []
+    content {
+      index_document     = static_website.value.index_document
+      error_404_document = lookup(static_website.value, "error_404_document", null)
+    }
+  }
 
   # Network Rules
   dynamic "network_rules" {
@@ -140,7 +172,7 @@ resource "azurerm_storage_container" "containers" {
   name                  = each.value.name
   storage_account_name  = azurerm_storage_account.storage_account.name
   container_access_type = lookup(each.value, "container_access_type", "private")
-  
+
   metadata = lookup(each.value, "metadata", null)
 
   depends_on = [azurerm_storage_account.storage_account]
@@ -153,10 +185,10 @@ resource "azurerm_storage_share" "file_shares" {
   name                 = each.value.name
   storage_account_name = azurerm_storage_account.storage_account.name
   quota                = lookup(each.value, "quota", 5120) # Default 5GB
-  
-  access_tier = lookup(each.value, "access_tier", "TransactionOptimized")
+
+  access_tier      = lookup(each.value, "access_tier", "TransactionOptimized")
   enabled_protocol = lookup(each.value, "enabled_protocol", "SMB")
-  metadata = lookup(each.value, "metadata", null)
+  metadata         = lookup(each.value, "metadata", null)
 
   depends_on = [azurerm_storage_account.storage_account]
 }
@@ -177,7 +209,7 @@ resource "azurerm_storage_queue" "queues" {
 
   name                 = each.value.name
   storage_account_name = azurerm_storage_account.storage_account.name
-  
+
   metadata = lookup(each.value, "metadata", null)
 
   depends_on = [azurerm_storage_account.storage_account]

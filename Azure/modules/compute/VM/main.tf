@@ -53,10 +53,10 @@ resource "azurerm_network_interface" "vm_nic" {
 
   ip_configuration {
     name                          = "${var.vm_name}-ipconfig"
-    subnet_id                     = var.subnet_id  # Implicit dependency: Subnet must exist before creating NIC
+    subnet_id                     = var.subnet_id # Implicit dependency: Subnet must exist before creating NIC
     private_ip_address_allocation = var.private_ip_address_allocation
     private_ip_address            = var.private_ip_address
-    public_ip_address_id          = var.enable_public_ip ? azurerm_public_ip.vm_public_ip[0].id : null  # Implicit dependency: Public IP must exist if enabled
+    public_ip_address_id          = var.enable_public_ip ? azurerm_public_ip.vm_public_ip[0].id : null # Implicit dependency: Public IP must exist if enabled
   }
 }
 
@@ -79,7 +79,7 @@ resource "azurerm_linux_virtual_machine" "vm" {
   admin_username                  = var.admin_username
   admin_password                  = var.admin_password
   disable_password_authentication = var.disable_password_authentication
-  network_interface_ids           = [azurerm_network_interface.vm_nic.id]  # NIC must exist before VM
+  network_interface_ids           = [azurerm_network_interface.vm_nic.id] # NIC must exist before VM
   tags                            = var.tags
 
   depends_on = [azurerm_network_interface.vm_nic]
@@ -116,15 +116,15 @@ resource "azurerm_linux_virtual_machine" "vm" {
 }
 
 resource "azurerm_windows_virtual_machine" "vm" {
-  count                = var.vm_os_type == "Windows" ? 1 : 0
-  name                 = var.vm_name
-  location             = var.location
-  resource_group_name  = var.resource_group_name
-  size                 = var.vm_size
-  admin_username       = var.admin_username
-  admin_password       = var.admin_password
-  network_interface_ids = [azurerm_network_interface.vm_nic.id]  # NIC must exist before VM
-  tags                 = var.tags
+  count                 = var.vm_os_type == "Windows" ? 1 : 0
+  name                  = var.vm_name
+  location              = var.location
+  resource_group_name   = var.resource_group_name
+  size                  = var.vm_size
+  admin_username        = var.admin_username
+  admin_password        = var.admin_password
+  network_interface_ids = [azurerm_network_interface.vm_nic.id] # NIC must exist before VM
+  tags                  = var.tags
 
   depends_on = [azurerm_network_interface.vm_nic]
 
@@ -171,9 +171,4 @@ resource "azurerm_virtual_machine_data_disk_attachment" "vm_data_disk_attach" {
   virtual_machine_id = var.vm_os_type == "Linux" ? azurerm_linux_virtual_machine.vm[0].id : azurerm_windows_virtual_machine.vm[0].id
   lun                = count.index + 10
   caching            = var.data_disks[count.index].caching
-
-  depends_on = [
-    azurerm_managed_disk.vm_data_disk,
-    var.vm_os_type == "Linux" ? azurerm_linux_virtual_machine.vm[0] : azurerm_windows_virtual_machine.vm[0]
-  ]
 }

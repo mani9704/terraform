@@ -37,11 +37,6 @@ output "log_analytics_workspace_workspace_id" {
   value       = azurerm_log_analytics_workspace.law.workspace_id
 }
 
-output "log_analytics_workspace_portal_url" {
-  description = "The Portal URL for the Log Analytics Workspace"
-  value       = azurerm_log_analytics_workspace.law.portal_url
-}
-
 # Solutions Outputs
 output "solution_ids" {
   description = "Map of solution names to their IDs"

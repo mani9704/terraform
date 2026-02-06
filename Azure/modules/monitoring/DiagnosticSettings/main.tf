@@ -14,7 +14,7 @@ resource "azurerm_monitor_diagnostic_setting" "diagnostic_settings" {
   dynamic "enabled_log" {
     for_each = lookup(each.value, "log_categories", [])
     content {
-      category = enabled_log.value.category
+      category       = enabled_log.value.category
       category_group = lookup(enabled_log.value, "category_group", null)
 
       retention_policy {
@@ -39,11 +39,10 @@ resource "azurerm_monitor_diagnostic_setting" "diagnostic_settings" {
   }
 
   # Legacy support - Log categories (simple list)
-  dynamic "log" {
+  dynamic "enabled_log" {
     for_each = lookup(each.value, "legacy_logs", [])
     content {
-      category = log.value
-      enabled  = true
+      category = enabled_log.value
 
       retention_policy {
         enabled = false

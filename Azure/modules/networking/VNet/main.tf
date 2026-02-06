@@ -25,15 +25,26 @@ resource "azurerm_subnet" "subnets" {
 
   depends_on = [azurerm_virtual_network.vnet]
 
-  name                                           = each.value.name
-  resource_group_name                            = var.resource_group_name
-  virtual_network_name                           = azurerm_virtual_network.vnet.name
-  address_prefixes                               = each.value.address_prefixes
-  service_endpoints                              = lookup(each.value, "service_endpoints", null)
-  service_endpoint_policy_ids                    = lookup(each.value, "service_endpoint_policy_ids", null)
-  private_endpoint_network_policies_enabled      = lookup(each.value, "private_endpoint_network_policies_enabled", null)
-  private_link_service_network_policies_enabled  = lookup(each.value, "private_link_service_network_policies_enabled", null)
-  delegation                                      = lookup(each.value, "delegation", null)
+  name                                          = each.value.name
+  resource_group_name                           = var.resource_group_name
+  virtual_network_name                          = azurerm_virtual_network.vnet.name
+  address_prefixes                              = each.value.address_prefixes
+  service_endpoints                             = lookup(each.value, "service_endpoints", null)
+  service_endpoint_policy_ids                   = lookup(each.value, "service_endpoint_policy_ids", null)
+  private_endpoint_network_policies_enabled     = lookup(each.value, "private_endpoint_network_policies_enabled", null)
+  private_link_service_network_policies_enabled = lookup(each.value, "private_link_service_network_policies_enabled", null)
+
+  dynamic "delegation" {
+    for_each = lookup(each.value, "delegation", null) != null ? lookup(each.value, "delegation", []) : []
+    content {
+      name = delegation.value.name
+
+      service_delegation {
+        name    = delegation.value.service_delegation.name
+        actions = lookup(delegation.value.service_delegation, "actions", null)
+      }
+    }
+  }
 }
 
 # Create Network Security Groups (optional, one per subnet)

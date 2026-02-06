@@ -1,7 +1,7 @@
 # Resource Group Configuration
-resource_group_name  = "rg-test-vm"
+resource_group_name   = "rg-test-vm"
 create_resource_group = true
-location             = "East US"
+location              = "East US"
 
 # ============================================
 # SINGLE VNET AND VM EXAMPLE
@@ -14,7 +14,7 @@ virtual_networks = {
     virtual_network_name = "vnet-test"
     address_space        = ["10.0.0.0/16"]
     dns_servers          = []
-    
+
     subnets = [
       {
         name             = "subnet1"
@@ -54,7 +54,7 @@ virtual_networks = {
         ]
       }
     ]
-    
+
     create_nsgs = true
   }
 }
@@ -66,17 +66,17 @@ virtual_machines = {
     subnet_name = "subnet1"
     vm_size     = "Standard_B1s"
     vm_os_type  = "Linux"
-    
+
     admin_username                  = "azureuser"
-    admin_password                  = "ChangeMe123!@#"  # IMPORTANT: Change this password!
-    disable_password_authentication = true
-    
+    admin_password                  = "ChangeMe123!@#" # IMPORTANT: Change this password!
+    disable_password_authentication = false
+
     enable_public_ip = true
     use_vnet_nsg     = true
-    
+
     os_disk_storage_account_type = "StandardSSD_LRS"
     os_disk_size_gb              = 30
-    
+
     source_image_publisher = "Canonical"
     source_image_offer     = "0001-com-ubuntu-server-jammy"
     source_image_sku       = "22_04-lts"

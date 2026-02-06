@@ -80,24 +80,24 @@ variable "endpoints" {
     enabled  = optional(bool, true)
     weight   = optional(number, 1)
     priority = optional(number, null)
-    
+
     # For Azure endpoints
     target_resource_id = optional(string, null)
-    
+
     # For External endpoints
     target = optional(string, null)
-    
+
     # For Nested endpoints
-    minimum_child_endpoints                 = optional(number, 1)
-    minimum_required_child_endpoints_ipv4   = optional(number, null)
-    minimum_required_child_endpoints_ipv6   = optional(number, null)
-    
+    minimum_child_endpoints               = optional(number, 1)
+    minimum_required_child_endpoints_ipv4 = optional(number, null)
+    minimum_required_child_endpoints_ipv6 = optional(number, null)
+
     # Optional: Custom headers
     custom_headers = optional(list(object({
       name  = string
       value = string
     })), [])
-    
+
     # Optional: Subnets (for Subnet routing method)
     subnets = optional(list(object({
       first = string

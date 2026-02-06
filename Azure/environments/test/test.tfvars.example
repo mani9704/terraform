@@ -142,7 +142,7 @@ virtual_machines = {
     
     admin_username                  = "azureuser"
     admin_password                  = "ChangeMe123!@#"  # Change this!
-    disable_password_authentication = true
+    disable_password_authentication = false
     
     enable_public_ip = true
     use_vnet_nsg     = true  # Use NSG from VNet module
@@ -171,7 +171,7 @@ virtual_machines = {
     
     admin_username                  = "azureuser"
     admin_password                  = "ChangeMe123!@#"  # Change this!
-    disable_password_authentication = true
+    disable_password_authentication = false
     
     enable_public_ip = false  # No public IP for backend
     use_vnet_nsg     = true
@@ -204,7 +204,7 @@ virtual_machines = {
     
     admin_username                  = "devuser"
     admin_password                  = "ChangeMe123!@#"  # Change this!
-    disable_password_authentication = true
+    disable_password_authentication = false
     
     enable_public_ip = true
     use_vnet_nsg     = true
@@ -710,8 +710,6 @@ app_services = {
     # This automatically adds:
     # - APPINSIGHTS_INSTRUMENTATIONKEY to app_settings
     # - APPLICATIONINSIGHTS_CONNECTION_STRING to app_settings
-    # - application_insights_connection_string to site_config
-    # - application_insights_key to site_config
     
     app_settings = {
       "WEBSITE_NODE_DEFAULT_VERSION" = "18-lts"
@@ -1125,7 +1123,7 @@ diagnostic_settings = {
       {
         category = "ServiceMap"
         retention_policy = {
-          enabled = truelaage 
+          enabled = true
           days    = 30
         }
       }
